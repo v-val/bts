@@ -1,0 +1,413 @@
+#!/usr/bin/env bash
+set -Eeou pipefail
+
+BTS_APP_ID=${0##*/}
+BTS_APP_ID=${BTS_APP_ID%.*[Ss][Hh]}
+app_path=${0%/*}
+
+bts_L() {
+  echo -e "$(date +"%m/%d %H:%M:%S") ${BTS_APP_ID} $@"
+}
+
+bts_D() {
+  bts_L "\033[1;90mdebug\033[0m" "$@"
+}
+
+bts_I() {
+  bts_L "\033[1;97minfo \033[0m" "$@"
+}
+
+bts_N() {
+  bts_L "\033[1;36mnote \033[0m" "$@"
+}
+
+bts_W() {
+  bts_L "\033[0;35mwarn \033[0m" "$@"
+}
+
+bts_E() {
+  bts_L "\033[0;31mERROR\033[0m" "$@" >&2
+}
+
+bts_F() {
+  local BTS_RC=${BTS_RC:-"-1"}
+  local MESSAGE_PREFIX_
+  if [ "${BTS_STEP_ID:-}" ]; then
+    MESSAGE_PREFIX_+="(step ${BTS_STEP_ID}) "
+    BTS_STEP_ID=$(( ${BTS_STEP_ID} - 1 ))
+  fi
+  bts_L "\033[1;41;97mFATAL\033[0m ${MESSAGE_PREFIX_}$@" >&2
+  exit "${BTS_RC}"
+}
+
+BTS_APP_WRAPPED_=${BTS_APP_WRAPPED_:-}
+if [ -z "${BTS_APP_WRAPPED_}" ]; then
+  exec env BTS_APP_WRAPPED_=1 bash -c "\"$0\" \"$@\" 2>&1 | tee -a \"${BTS_APP_ID}.log\""
+  BTS_RC_=$?
+  bts_W "EXEC RC ${BTS_RC_}"
+  exit ${BTS_RC_}
+fi
+
+bts_D "Start pid=$$"
+
+
+BTS_RECIPE_DEFAULT="${BTS_APP_ID}-recipe"
+### Find recipe
+BTS_RECIPE="${BTS_RECIPE:-}"
+if [ -z "${BTS_RECIPE}" -a $# -gt 0 ]; then BTS_RECIPE="$1" ; shift ; fi
+[ "${BTS_RECIPE}" -o ! -f "${BTS_RECIPE_DEFAULT}" ] || BTS_RECIPE="${BTS_RECIPE_DEFAULT}"
+[ -z "${BTS_RECIPE}" ] \
+  && cat<<EOF >&2 && bts_F "Usage error"
+Recipe file not specified, default not found.
+Please provide recipe file in one of following ways:
+* with BTS_RECIPE env var
+* as first command line argument
+* as '${BTS_RECIPE_DEFAULT}' file in current directory
+EOF
+
+BTS_RECIPE_DIR=${BTS_RECIPE%/*}
+bts_D "recipe ${BTS_RECIPE}, dir ${BTS_RECIPE_DIR}"
+
+# Doesn't work
+#exec 3>&1 4>&2
+#trap 'exec 2>&4 1>&3' 0 1 2 3
+#exec 1 2>&1 | tee "${BTS_APP_ID}"-$(date +%y%m%d-%H%M%S).log
+
+#
+BTS_ARCH=$(uname -m)
+BTS_ARCH_SUFFIX=
+[ "${BTS_ARCH}" = "x86_64" -o "${BTS_ARCH}" = "amd64" ] \
+  && BTS_ARCH_SUFFIX="64" \
+  || BTS_ARCH_SUFFIX=""
+
+# Init routines for various platforms
+
+# Runtime properties
+Platform=
+Platform_EL=
+case ${OSTYPE} in
+[Mm][Ss][Yy][Ss])
+	Platform=msys
+	;;
+[Cc][Yy][Gg][Ww][Ii][Nn])
+	Platform=cygwin
+	;;
+[Ll][Ii][Nn][Uu][Xx]*)
+	if [ -f "/etc/redhat-release" ]
+	then
+	  Platform="rh"
+		Platform_EL=EL$(cat /etc/redhat-release | perl -pe 's,.*?(\d).*,$1,')
+    bts_D "Detected platform ${Platform} ${Platform_EL}"
+	else
+		bts_F "Unsupported ${OSTYPE} family"
+	fi
+	;;
+*)
+	bts_F "Unsupported platform ${OSTYPE}"
+	;;
+esac
+
+
+bts_init()
+{
+	BTS_ROOT=${BTS_ROOT:-$1}
+	[ "${BTS_ROOT}" ] || bts_F "BTS_ROOT is not defined"
+  # Default dir for built programs
+	BTS_BIN_DIR="${BTS_ROOT}/bin"
+	[ -d "${BTS_BIN_DIR}" ] || mkdir -p "${BTS_BIN_DIR}"
+	# Default dir for built superuser programs
+	BTS_SBIN_DIR="${BTS_ROOT}/sbin"
+	[ -d "${BTS_SBIN_DIR}" ] || mkdir -p "${BTS_SBIN_DIR}"
+	# Default dir for built libraries
+	BTS_LIB_DIR_NAME="lib${BTS_ARCH_SUFFIX}"
+	BTS_LIB_DIR="${BTS_ROOT}/${BTS_LIB_DIR_NAME}"
+	[ -d "${BTS_LIB_DIR}" ] || mkdir -p "${BTS_LIB_DIR}"
+	# Default dir for headers
+	BTS_INCLUDE_DIR="${BTS_ROOT}/include"
+	[ -d "${BTS_INCLUDE_DIR}" ] || mkdir -p "${BTS_INCLUDE_DIR}"
+	# Top dir for source and build dirs
+	BTS_WORK_DIR="${BTS_ROOT}/.${BTS_APP_ID}"
+	[ -e "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
+	(pushd . >/dev/null 2>&1; cd "${BTS_WORK_DIR}" ; popd >/dev/null 2>&1)
+	# Conf dir, now storing only profile
+	BTS_CONF_DIR="${BTS_WORK_DIR}/etc"
+	[ -d "${BTS_CONF_DIR}" ] || mkdir -p "${BTS_CONF_DIR}"
+  # Environment vars used by builds
+	BTS_PROFILE="${BTS_CONF_DIR}/profile"
+	[ "${Platform}" = "rh" -a $(id -u) -ne 0 ] && BTS_SUDO="sudo "
+	# Directory with extras (e.g. patches)
+	BTS_RECIPE_DIR="${BTS_RECIPE%/*}"
+	[ "${BTS_RECIPE_DIR}" ] || BTS_RECIPE_DIR="${PWD}"
+cat<<EOF >&2
+Toolchain tree defined:
+Prefix:        ${BTS_ROOT}
+Library path:  ${BTS_LIB_DIR}
+Includes path: ${BTS_INCLUDE_DIR}
+BTC path:      ${BTS_WORK_DIR}
+BTC profile:   ${BTS_PROFILE}
+EOF
+	# Initialize step id
+	BTS_STEP_ID=0
+	BUILD_STEP_FILE=
+	#
+	BTS_SUDO=${BTS_SUDO:-}
+	BTS_CMAKE_PREFIX_PATH=${BTS_CMAKE_PREFIX_PATH:-}
+	#
+	TAG=
+  ARCHIEVED_DIR=
+  BTS_GET_DIR=
+  LOCAL_REPO=
+  SCHEME=
+  # Inform external world  that we're not ready
+	touch "${BTS_ROOT}/.disabled"
+}
+
+bts_end()
+{
+	if [ $? -eq 0 -a "${BTS_STEP_ID:-}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
+	then
+		cd "${BTS_WORK_DIR}"
+		touch "${BUILD_STEP_FILE}"
+		echo " + Done"
+	fi
+	rm -f "${BTS_ROOT}/.disabled"
+	date +%s > "${BTS_ROOT}/.updated"
+}
+trap bts_end EXIT ERR
+
+
+bts_pkg()
+{
+	case "${Platform}" in
+	rh)
+	  if [ "${Platform_EL}" = "EL8" ]
+	  then
+		  ${BTS_SUDO} dnf -y "$@"
+		elif [ "${Platform_EL}" = "EL7" ]
+		then
+		  ${BTS_SUDO} yum -y "$@"
+		else
+		  BTS_F "Unsupported platform '${Platform}' version '${Platform_EL}'"
+		fi
+		;;
+  cygwin)
+    if ! command -v apt-cyg >/dev/null 2>&1
+    then
+      bts_N "apt-cyg missing"
+      curl -nOL https://raw.githubusercontent.com/transcode-open/apt-cyg/master/apt-cyg
+      if [ ! -d ~/exec ]
+      then
+        mkdir ~/exec
+        export PATH=~/exec:${PATH}
+      fi
+      install apt-cyg ~/exec
+      bts_N "apt-cyg installed as $(command -v apt-cyg)"
+    fi
+    apt-cyg "$@"
+    ;;
+	msys)
+		local a="$1"
+		shift
+		case "${a}" in
+		[Ii][Nn][Ss][Tt][Aa][Ll][Ll])
+			pacman -S --needed --noconfirm "$@"
+			;;
+		*)
+			bts_F "Command '${a}' not supported"
+			;;
+		esac
+		;;
+	esac
+}
+
+bts_env()
+{
+	( [ -f "${BTS_PROFILE}" ] && source "${BTS_PROFILE}" ; command "$@")
+}
+
+bts_configure()
+{
+	bts_env ${BTS_configure_path:-.}/configure --prefix=${BTS_configure_root:-"${BTS_ROOT}"} --libdir=${BTS_configure_libdir:-"${BTS_LIB_DIR}"} "$@"
+}
+
+
+bts_make()
+{
+	bts_env make -j$(( $(nproc) / 2 )) "$@"
+}
+
+bts_cmake()
+{
+  local GENERATOR_="Ninja Multi-Config"
+  local DASH_G_
+  DASH_G_=-G"${GENERATOR_}"
+  bts_N "Use '${GENERATOR_}'"
+#  bts_D "Command: cmake -G\"${GENERATOR_}\" -DCMAKE_INSTALL_PREFIX=\"${BTS_ROOT}\" -DCMAKE_PREFIX_PATH=\"${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}\" \"$@\""
+  BTS_PROFILE="${BTS_PROFILE}" \
+	bts_env cmake -G"${GENERATOR_}" -DCMAKE_INSTALL_PREFIX="${BTS_ROOT}" -DCMAKE_PREFIX_PATH="${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}" "$@"
+}
+
+bts_cmake_build_install()
+{
+  bts_env cmake --build . -j$(( $(nproc) / 2 )) --config="Release" --target install
+}
+
+bts_step()
+{
+	[ -d "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
+	cd "${BTS_WORK_DIR}"
+#	echo "  * Changed to ${PWD}"
+
+	if [ "${BTS_STEP_ID}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
+	then
+		touch "${BUILD_STEP_FILE}"
+		bts_I "+ Done"
+	fi
+
+	BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
+	local BUILD_STEP_DESC_=${BTS_STEP_DESC:-"$1"}
+	[ "${BUILD_STEP_DESC_}" ] || bts_F "Required BTS_STEP_DESC missing!"
+	local BUILD_STEP_TAG_="$(echo "${BUILD_STEP_DESC_}" | perl -pe 'chomp; s,\s+,-,g; s,\-+,-,g')"
+	BUILD_STEP_FILE=".${BTS_APP_ID}.${BUILD_STEP_TAG_}"
+
+	bts_N "== #${BTS_STEP_ID} ${BUILD_STEP_DESC_}"
+	if [ -f "${BUILD_STEP_FILE}" ]
+	then
+		bts_I " + Skip [already done]"
+		return 1
+	fi
+
+	TAG=
+	ARCHIEVED_DIR=
+	BTS_GET_DIR=
+	LOCAL_REPO=
+	SCHEME=
+
+	return 0
+}
+
+bts_build_dir()
+{
+	BTS_CURRENT_SOURCE_DIR="${PWD}"
+	BTS_CURRENT_BUILD_DIR="${BTS_WORK_DIR}/${BTS_CURRENT_SOURCE_DIR##*/}.build"
+	[ -d "${BTS_CURRENT_BUILD_DIR}" ] || mkdir -p "${BTS_CURRENT_BUILD_DIR}"
+	cd "${BTS_CURRENT_BUILD_DIR}"
+	echo "  * Changed to ${PWD}"
+}
+
+bts_untar()
+{
+  bts_env tar xf "$@"
+}
+
+bts_unzip()
+{
+  bts_env unzip "$@"
+}
+
+bts_get()
+{
+	local url="$1"
+	shift
+	bts_D "bts_get URL = ${url}"
+	# Many URL end with source code archive file
+	# In other cases "file" would be repository name
+	local file="${url}"
+	# Hack against sourceforge /download URLs
+	file=${file%/download}
+	# Leave only trailing component
+	file=${file##*/}
+	# For CVS repo passed as separate arg
+	local dir
+	# bts_extract_dir
+	local BTS_EXTRACT_DIR=${BTS_EXTRACT_DIR:-}
+	local BTS_NOCD=${BTS_NOCD:-}
+
+	if [ "${SCHEME}" = "git" ] || echo "${file}" | egrep -iqs '\.(git)$'
+	then
+		dir="$(echo ${file} | perl -pe 's,\.git$,,')"
+		local opt_ref_=""
+		if [ "${TAG}" ]
+		then
+		  dir="${dir}-${TAG}"
+		  opt_ref_="-b${TAG}"
+		fi
+		[ -d "${dir}" ] || git clone --depth 1 ${opt_ref_} --recurse-submodules "$@" "${url}" "${dir}"
+		cd "${dir}"
+#		[ "${TAG}" ] && git checkout tags/"${TAG}"
+	elif [ "${SCHEME}" = "svn" ] || echo "${url}" | egrep -iqs '^svn://'
+	then
+		local SCHEME="svn"
+		[ "${LOCAL_REPO}" ] || bts_F "Schema ${SCHEME} requires LOCAL_REPO to be set"
+		dir="${LOCAL_REPO}"
+		[ -d "${dir}" ] || svn co "${url}" "${LOCAL_REPO}"
+		cd "${dir}"
+	elif [ "${SCHEME}" = "cvs" ] || echo "${url}" | egrep -iqs '^cvs:/*'
+	then
+		local SCHEME="cvs"
+		local repo="${1:-}"
+    shift
+		local url_=$(echo "${url}" | perl -pe 's,^cvs:/*,,i')
+		# Todo: checkout to dir passed with LOCAL_REPO if specified
+		[ "${repo}" ] || bts_F "Schema ${SCHEME} requires repository name passed as last arg"
+		dir="${repo}"
+		local cmd="cvs -z3 -d ${url_} co"
+		[ "${TAG}" ] && cmd+=" -r ${TAG}"
+		cmd+=" ${repo}"
+		[ -d "${dir}" ] || ${cmd}
+		cd "${dir}"
+	elif [ "${SCHEME}" = "rsync" ] ### Invent scheme for rsync ?? || echo "${url}" | egrep -iqs '^cvs:/*'
+  then
+    local SCHEME="rsync"
+    local url_="${url}"
+    dir="${url_##*/}"
+    local cmd="rsync -az ${url_}"
+    cmd="${cmd} ${repo:-.}"
+    [ -z "${BTS_GET_FORCE:-}" -a -d "${dir}" ] || ${cmd}
+    cd "${dir}"
+	else
+	  local archive_type_
+	  local extract_fn_
+	  if echo "${file}" | egrep -iqs '\.(tar|t(ar\.)?(gz|bz2?|xz))$'
+    then
+      archive_type_="tar"
+      extract_fn_="bts_untar"
+      dir=$(echo "${file}" | perl -pe 's,\.(tar|t(ar\.)?(gz|bz2?|xz))$,,i')
+    elif echo "${file}" | egrep -iqs '\.zip$'
+    then
+      archive_type_="zip"
+      extract_fn_="bts_unzip"
+      dir=$(echo "${file}" | perl -pe 's,\.zip$,,i')
+    else
+			bts_F "Unsupported archive ${file}"
+		fi
+    # Archived directory can be override
+    [ "${ARCHIEVED_DIR}" ] \
+      && dir="${ARCHIEVED_DIR}"
+    # Fetch file
+		[ -f "${file}" ] || curl -nL -o "${file}" "${url}"
+    # Extract file
+    if [ "${BTS_GET_DIR:-}" ]
+    then
+      [ -d "${BTS_GET_DIR}" ] || mkdir -p "${BTS_GET_DIR}"
+      cd "${BTS_GET_DIR}"
+      ${extract_fn_} "${BTS_WORK_DIR}/${file}"
+    else
+      ${extract_fn_} "${file}"
+    fi
+    if [ "${BTS_NOCD:-}" ]
+    then
+      true
+    elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
+    then
+      cd "${BTS_EXTRACT_DIR}"
+    elif [ -d "${dir}" ]
+    then
+      cd "${dir}"
+    fi
+	fi
+	echo "  * Changed to ${PWD}"
+}
+
+bts_I "Start"
+source "${BTS_RECIPE}"
