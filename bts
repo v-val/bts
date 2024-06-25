@@ -43,9 +43,8 @@ bts_F() {
 BTS_APP_WRAPPED_=${BTS_APP_WRAPPED_:-}
 if [ -z "${BTS_APP_WRAPPED_}" ]; then
   exec env BTS_APP_WRAPPED_=1 bash -c "\"$0\" \"$@\" 2>&1 | tee -a \"${BTS_APP_ID}.log\""
-  BTS_RC_=$?
-  bts_W "EXEC RC ${BTS_RC_}"
-  exit ${BTS_RC_}
+  BTS_RC=$? \
+    bts_F "`exec` returned ${RC_}"
 fi
 
 bts_D "Start pid=$$"
