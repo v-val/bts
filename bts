@@ -8,26 +8,32 @@ app_path=${0%/*}
 bts_L() {
   echo -e "$(date +"%m/%d %H:%M:%S") ${BTS_APP_ID} $@"
 }
+export -f bts_L
 
 bts_D() {
   bts_L "\033[1;90mdebug\033[0m" "$@"
 }
+export -f bts_D
 
 bts_I() {
   bts_L "\033[1;97minfo \033[0m" "$@"
 }
+export -f bts_I
 
 bts_N() {
   bts_L "\033[1;36mnote \033[0m" "$@"
 }
+export -f bts_N
 
 bts_W() {
   bts_L "\033[0;35mwarn \033[0m" "$@"
 }
+export -f bts_W
 
 bts_E() {
   bts_L "\033[0;31mERROR\033[0m" "$@" >&2
 }
+export -f bts_E
 
 bts_F() {
   local BTS_RC=${BTS_RC:-"-1"}
@@ -39,6 +45,7 @@ bts_F() {
   bts_L "\033[1;41;97mFATAL\033[0m ${MESSAGE_PREFIX_}$@" >&2
   exit "${BTS_RC}"
 }
+export -f bts_F
 
 BTS_APP_WRAPPED_=${BTS_APP_WRAPPED_:-}
 if [ -z "${BTS_APP_WRAPPED_}" ]; then
@@ -162,6 +169,8 @@ EOF
   # Inform external world  that we're not ready
 	touch "${BTS_ROOT}/.disabled"
 }
+export -f bts_init
+
 
 bts_end()
 {
@@ -220,22 +229,29 @@ bts_pkg()
 		;;
 	esac
 }
+export -f bts_pkg
+
 
 bts_env()
 {
 	( [ -f "${BTS_PROFILE}" ] && source "${BTS_PROFILE}" ; command "$@")
 }
+export -f bts_env
+
 
 bts_configure()
 {
 	bts_env ${BTS_configure_path:-.}/configure --prefix=${BTS_configure_root:-"${BTS_ROOT}"} --libdir=${BTS_configure_libdir:-"${BTS_LIB_DIR}"} "$@"
 }
+export -f bts_configure
 
 
 bts_make()
 {
 	bts_env make -j$(( $(nproc) / 2 )) "$@"
 }
+export -f bts_make
+
 
 bts_cmake()
 {
@@ -247,11 +263,15 @@ bts_cmake()
   BTS_PROFILE="${BTS_PROFILE}" \
 	bts_env cmake -G"${GENERATOR_}" -DCMAKE_INSTALL_PREFIX="${BTS_ROOT}" -DCMAKE_PREFIX_PATH="${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}" "$@"
 }
+export -f bts_cmake
+
 
 bts_cmake_build_install()
 {
   bts_env cmake --build . -j$(( $(nproc) / 2 )) --config="Release" --target install
 }
+export -f bts_cmake_build_install
+
 
 bts_step()
 {
@@ -286,6 +306,8 @@ bts_step()
 
 	return 0
 }
+export -f bts_step
+
 
 bts_build_dir()
 {
@@ -295,6 +317,8 @@ bts_build_dir()
 	cd "${BTS_CURRENT_BUILD_DIR}"
 	echo "  * Changed to ${PWD}"
 }
+export -f bts_build_dir
+
 
 bts_untar()
 {
@@ -303,11 +327,15 @@ bts_untar()
   [[ "${FILE_}" =~ 'xz$' ]] && ARGS_+="J"
   bts_env tar ${ARGS_}f "$@"
 }
+export -f bts_untar
+
 
 bts_unzip()
 {
   bts_env unzip "$@"
 }
+export -f bts_unzip
+
 
 bts_get()
 {
@@ -412,6 +440,7 @@ bts_get()
 	fi
 	echo "  * Changed to ${PWD}"
 }
+export -f bts_get
 
 bts_I "Start"
 source "${BTS_RECIPE}"
