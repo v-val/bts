@@ -298,7 +298,10 @@ bts_build_dir()
 
 bts_untar()
 {
-  bts_env tar xf "$@"
+  local FILE_="$1"
+  local ARGS_="x"
+  [[ "${FILE_}" =~ 'xz$' ]] && ARGS_+="J"
+  bts_env tar ${ARGS_}f "$@"
 }
 
 bts_unzip()
