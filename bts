@@ -178,7 +178,7 @@ bts_end()
 	then
 		cd "${BTS_WORK_DIR}"
 		touch "${BUILD_STEP_FILE}"
-		echo " + Done"
+		bts_N "Done"
 	fi
 	rm -f "${BTS_ROOT}/.disabled"
 	date +%s > "${BTS_ROOT}/.updated"
@@ -282,7 +282,7 @@ bts_step()
 	if [ "${BTS_STEP_ID}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
 	then
 		touch "${BUILD_STEP_FILE}"
-		bts_I "+ Done"
+		bts_I "Done"
 	fi
 
 	BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
@@ -291,10 +291,10 @@ bts_step()
 	local BUILD_STEP_TAG_="$(echo "${BUILD_STEP_DESC_}" | perl -pe 'chomp; s,\s+,-,g; s,\-+,-,g')"
 	BUILD_STEP_FILE=".${BTS_APP_ID}.${BUILD_STEP_TAG_}"
 
-	bts_N "== #${BTS_STEP_ID} ${BUILD_STEP_DESC_}"
+	bts_N "${BTS_STEP_ID} ${BUILD_STEP_DESC_}"
 	if [ -f "${BUILD_STEP_FILE}" ]
 	then
-		bts_I " + Skip [already done]"
+		bts_I "Skip [already done]"
 		return 1
 	fi
 
@@ -315,7 +315,7 @@ bts_build_dir()
 	BTS_CURRENT_BUILD_DIR="${BTS_WORK_DIR}/${BTS_CURRENT_SOURCE_DIR##*/}.build"
 	[ -d "${BTS_CURRENT_BUILD_DIR}" ] || mkdir -p "${BTS_CURRENT_BUILD_DIR}"
 	cd "${BTS_CURRENT_BUILD_DIR}"
-	echo "  * Changed to ${PWD}"
+	bts_D "Changed to ${PWD}"
 }
 export -f bts_build_dir
 
