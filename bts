@@ -264,7 +264,11 @@ bts_cmake()
   bts_N "Use '${GENERATOR_}'"
 #  bts_D "Command: cmake -G\"${GENERATOR_}\" -DCMAKE_INSTALL_PREFIX=\"${BTS_ROOT}\" -DCMAKE_PREFIX_PATH=\"${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}\" \"$@\""
   BTS_PROFILE="${BTS_PROFILE}" \
-	bts_env cmake -G"${GENERATOR_}" -DCMAKE_INSTALL_PREFIX="${BTS_ROOT}" -DCMAKE_PREFIX_PATH="${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}" "$@"
+	bts_env cmake \
+	  -G"${GENERATOR_}" \
+	  -DCMAKE_INSTALL_PREFIX=${BTS_CMAKE_INSTALL_PREFIX:-"${BTS_ROOT}"} \
+	  -DCMAKE_PREFIX_PATH="${BTS_ROOT}${BTS_CMAKE_PREFIX_PATH:+;${BTS_CMAKE_PREFIX_PATH}}" \
+	  "$@"
 }
 export -f bts_cmake
 
