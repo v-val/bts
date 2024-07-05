@@ -90,6 +90,12 @@ BTS_ARCH_SUFFIX=
   || BTS_ARCH_SUFFIX=""
 export BTS_ARCH_SUFFIX
 
+#
+# N CPUs
+BTS_NCPUS=$(nproc)
+BTS_NJOBS_DEFAULT=$(( ${BTS_NCPUS} / 2 ))
+BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
+
 # Init routines for various platforms
 
 # Runtime properties
@@ -258,7 +264,7 @@ export -f bts_configure
 
 bts_make()
 {
-	bts_env make -j$(( $(nproc) / 2 )) "$@"
+	bts_env make -j${BTS_NJOBS} "$@"
 }
 export -f bts_make
 
@@ -282,7 +288,7 @@ export -f bts_cmake
 
 bts_cmake_build_install()
 {
-  bts_env cmake --build . -j$(( $(nproc) / 2 )) --config="Release" --target install
+  bts_env cmake --build . -j${BTS_NJOBS} --config="Release" --target install
 }
 export -f bts_cmake_build_install
 
