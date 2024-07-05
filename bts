@@ -295,7 +295,7 @@ bts_step()
 	BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
 	local BUILD_STEP_DESC_=${BTS_STEP_DESC:-"$1"}
 	[ "${BUILD_STEP_DESC_}" ] || bts_F "Required BTS_STEP_DESC missing!"
-	local BUILD_STEP_TAG_="$(echo "${BUILD_STEP_DESC_}" | perl -pe 'chomp; s,\s+,-,g; s,\-+,-,g')"
+	local BUILD_STEP_TAG_=$(sed -e 's,\W\+,-,g; s,^\-\|\-$,,g' <<< "${BUILD_STEP_DESC_}")
 	BUILD_STEP_FILE=".${BTS_APP_ID}.${BUILD_STEP_TAG_}"
 
 	bts_N "${BTS_STEP_ID} ${BUILD_STEP_DESC_}"
@@ -364,7 +364,7 @@ bts_get()
 
 	if [ "${SCHEME}" = "git" ] || echo "${file}" | egrep -iqs '\.(git)$'
 	then
-		dir="$(echo ${file} | perl -pe 's,\.git$,,')"
+		dir=$(sed -e 's,\.git$,,i' <<< "${file}")
 		local opt_ref_=""
 		if [ "${TAG}" ]
 		then
@@ -386,7 +386,7 @@ bts_get()
 		local SCHEME="cvs"
 		local repo="${1:-}"
     shift
-		local url_=$(echo "${url}" | perl -pe 's,^cvs:/*,,i')
+		local url_=$(sed -e 's,^cvs:/*,,i' <<< "${url}")
 		# Todo: checkout to dir passed with LOCAL_REPO if specified
 		[ "${repo}" ] || bts_F "Schema ${SCHEME} requires repository name passed as last arg"
 		dir="${repo}"
@@ -416,7 +416,7 @@ bts_get()
     then
       archive_type_="zip"
       extract_fn_="bts_unzip"
-      dir=$(echo "${file}" | perl -pe 's,\.zip$,,i')
+      dir=$(sed -e 's,\.zip$,,i' <<< "${file}")
     else
 			bts_F "Unsupported archive ${file}"
 		fi
