@@ -200,7 +200,7 @@ bts_pkg()
 		then
 		  ${BTS_SUDO} yum -y "$@"
 		else
-		  BTS_F "Unsupported platform '${Platform}' version '${Platform_EL}'"
+		  bts_F "Unsupported platform '${Platform}' version '${Platform_EL}'"
 		fi
 		;;
   cygwin)
