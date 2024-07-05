@@ -311,6 +311,9 @@ bts_step()
 	LOCAL_REPO=
 	SCHEME=
 
+	BTS_CURRENT_SOURCE_DIR=
+	BTS_CURRENT_BUILD_DIR=
+
 	return 0
 }
 export -f bts_step
