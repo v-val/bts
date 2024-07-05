@@ -449,7 +449,7 @@ bts_get()
       cd "${dir}"
     fi
 	fi
-	echo "  * Changed to ${PWD}"
+	bts_D "Changed to ${PWD}"
 }
 export -f bts_get
 
