@@ -365,7 +365,8 @@ bts_get()
 	local BTS_EXTRACT_DIR=${BTS_EXTRACT_DIR:-}
 	local BTS_NOCD=${BTS_NOCD:-}
 
-	if [ "${SCHEME}" = "git" ] || echo "${file}" | egrep -iqs '\.(git)$'
+  # TODO: rework
+	if [ "${SCHEME}" = "git" ] || egrep -iqs '\.(git)$' <<< "${file}"
 	then
 		dir=$(sed -e 's,\.git$,,i' <<< "${file}")
 		local opt_ref_=""
@@ -377,14 +378,14 @@ bts_get()
 		[ -d "${dir}" ] || git clone --depth 1 ${opt_ref_} --recurse-submodules "$@" "${url}" "${dir}"
 		cd "${dir}"
 #		[ "${TAG}" ] && git checkout tags/"${TAG}"
-	elif [ "${SCHEME}" = "svn" ] || echo "${url}" | egrep -iqs '^svn://'
+	elif [ "${SCHEME}" = "svn" ] || egrep -iqs '^svn://' <<< "${url}"
 	then
 		local SCHEME="svn"
 		[ "${LOCAL_REPO}" ] || bts_F "Schema ${SCHEME} requires LOCAL_REPO to be set"
 		dir="${LOCAL_REPO}"
 		[ -d "${dir}" ] || svn co "${url}" "${LOCAL_REPO}"
 		cd "${dir}"
-	elif [ "${SCHEME}" = "cvs" ] || echo "${url}" | egrep -iqs '^cvs:/*'
+	elif [ "${SCHEME}" = "cvs" ] || egrep -iqs '^cvs:/*' <<< "${url}"
 	then
 		local SCHEME="cvs"
 		local repo="${1:-}"
@@ -415,7 +416,7 @@ bts_get()
       archive_type_="tar"
       extract_fn_="bts_untar"
       dir=$(echo "${file}" | perl -pe 's,\.(tar|t(ar\.)?(gz|bz2?|xz))$,,i')
-    elif echo "${file}" | egrep -iqs '\.zip$'
+    elif egrep -iqs '\.zip$' <<< "${file}"
     then
       archive_type_="zip"
       extract_fn_="bts_unzip"
