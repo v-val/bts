@@ -82,6 +82,7 @@ bts_D "recipe ${BTS_RECIPE}, dir ${BTS_RECIPE_DIR}"
 #trap 'exec 2>&4 1>&3' 0 1 2 3
 #exec 1 2>&1 | tee "${BTS_APP_ID}"-$(date +%y%m%d-%H%M%S).log
 
+# NB: OS-specific
 #
 BTS_ARCH=$(uname -m)
 BTS_ARCH_SUFFIX=
@@ -98,6 +99,7 @@ BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
 
 # Init routines for various platforms
 
+# NB: OS-specific
 # Runtime properties
 Platform=
 Platform_EL=
@@ -202,6 +204,7 @@ bts_end()
 trap bts_end EXIT ERR
 
 
+# NB: OS-specific
 bts_pkg()
 {
 	case "${Platform}" in
