@@ -253,7 +253,11 @@ export -f bts_pkg
 
 bts_env()
 {
-	( [ -f "${BTS_PROFILE}" ] && source "${BTS_PROFILE}" ; command "$@")
+	( \
+	  [ ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}" ;  \
+	  echo "env | egrep '^\S' | egrep '^BTS|PATH|FLAGS' | sort" >/dev/null ; \
+	  command "$@" \
+  )
 }
 export -f bts_env
 
