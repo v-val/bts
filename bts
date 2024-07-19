@@ -318,7 +318,7 @@ bts_step()
 	BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
 	local BUILD_STEP_DESC_=${BTS_STEP_DESC:-"$1"}
 	[ "${BUILD_STEP_DESC_}" ] || bts_F "Required BTS_STEP_DESC missing!"
-	local BUILD_STEP_TAG_=$(sed -e 's,\W\+,-,g; s,^\-\|\-$,,g' <<< "${BUILD_STEP_DESC_}")
+	local BUILD_STEP_TAG_=$(perl -pe 's,[^\w\.]+,-,gi; s,^\-|\-$,,g' <<< "${BUILD_STEP_DESC_}")
 	BUILD_STEP_FILE=".${BTS_APP_ID}.${BUILD_STEP_TAG_}"
 
 	bts_N "${BTS_STEP_ID} ${BUILD_STEP_DESC_}"
