@@ -264,7 +264,10 @@ export -f bts_env
 
 bts_configure()
 {
-	bts_env ${BTS_CONFIGURE_PATH:-.}/configure --prefix=${BTS_CONFIGURE_ROOT:-"${BTS_ROOT}"} --libdir=${BTS_CONFIGURE_LIBDIR:-"${BTS_LIB_DIR}"} "$@"
+  local prefix_=${BTS_CONFIGURE_ROOT:-"${BTS_ROOT}"}
+  local libdir_=${BTS_CONFIGURE_LIBDIR:-${BTS_CONFIGURE_ROOT:+"${BTS_CONFIGURE_ROOT}/${BTS_LIB_DIR_NAME}"}}
+  [ "${libdir_}" ] || libdir_="${BTS_LIB_DIR}"
+	bts_env ${BTS_CONFIGURE_DIR:-.}/configure --prefix="${prefix_}" --libdir="${libdir_}" "$@"
 }
 export -f bts_configure
 
