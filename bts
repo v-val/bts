@@ -152,7 +152,7 @@ bts_init()
 	export BTS_CONF_DIR="${BTS_WORK_DIR}/etc"
 	[ -d "${BTS_CONF_DIR}" ] || mkdir -p "${BTS_CONF_DIR}"
   # Environment vars used by builds
-	BTS_PROFILE="${BTS_CONF_DIR}/profile"
+	export BTS_PROFILE=${BTS_PROFILE:-"${BTS_ROOT}/enable"}
 	[ "${Platform}" = "rh" -a $(id -u) -ne 0 ] && BTS_SUDO="sudo "
 	# Directory with extras (e.g. patches)
 	export BTS_RECIPE_DIR="${BTS_RECIPE%/*}"
