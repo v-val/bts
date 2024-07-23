@@ -95,7 +95,7 @@ export BTS_ARCH_SUFFIX
 # N CPUs
 BTS_NCPUS=$(nproc)
 BTS_NJOBS_DEFAULT=$(( ${BTS_NCPUS} / 2 ))
-BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
+export BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
 
 # Init routines for various platforms
 
