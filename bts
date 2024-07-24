@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -Eeou pipefail
+set -Eeuo pipefail
 
 BTS_APP_ID=${0##*/}
 BTS_APP_ID=${BTS_APP_ID%.*[Ss][Hh]}
