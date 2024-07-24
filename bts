@@ -298,7 +298,7 @@ export -f bts_cmake
 
 bts_cmake_build_install()
 {
-  bts_env cmake --build . -j${BTS_NJOBS} --config="Release" --target install
+  bts_env cmake --build . -j${BTS_NJOBS} --config="Release" --target install${BTS_CMAKE_INSTALL_TYPE:-"/strip"}
 }
 export -f bts_cmake_build_install
 
