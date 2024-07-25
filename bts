@@ -36,14 +36,14 @@ bts_E() {
 export -f bts_E
 
 bts_F() {
-  local BTS_RC=${BTS_RC:-"-1"}
+  local BTS_RC=${BTS_RC:-255}
   local MESSAGE_PREFIX_=
   if [ "${BTS_STEP_ID:-}" ]; then
     MESSAGE_PREFIX_+="(step ${BTS_STEP_ID}) "
     BTS_STEP_ID=$(( ${BTS_STEP_ID} - 1 ))
   fi
-  bts_L "\033[1;41;97mFATAL\033[0m ${MESSAGE_PREFIX_}$@" >&2
-  exit "${BTS_RC}"
+  bts_L "\033[1;41;97mFATAL\033[0m ${MESSAGE_PREFIX_} $@" >&2
+  exit ${BTS_RC}
 }
 export -f bts_F
 
