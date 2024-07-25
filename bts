@@ -52,29 +52,51 @@ export -f bts_F
 #
 BTS_APP_WRAPPED_=${BTS_APP_WRAPPED_:-}
 if [ -z "${BTS_APP_WRAPPED_}" ]; then
-  exec env BTS_APP_WRAPPED_=1 bash -c "\"$0\" \"$@\" 2>&1 | tee -a \"${BTS_APP_ID}.log\""
+  exec env BTS_APP_WRAPPED_=1 bash -Eeuo pipefail -c "\"$0\" \"$@\" 2>&1 | tee -a \"${BTS_APP_ID}.log\""
   BTS_RC=$? \
     bts_F "\`exec\` returned ${RC_}"
 fi
 
-bts_D "Start pid=$$"
+#
+# Recipe file name can be passed as follows: 
+# * As BTS_RECIPE env
+#   or
+# * As 1st positional argument
+[ -z "${BTS_RECIPE:-}" -a $# -gt 0 ] && BTS_RECIPE="$1" && shift
 
-
-BTS_RECIPE_DEFAULT="${BTS_APP_ID}-recipe"
+BTS_RECIPE_DEFAULT="${BTS_APP_ID}recipe"
+#
+# If neither of above provided, defaults will be tried:
+# * "${BTS_RECIPE_DEFAULT}" or ".${BTS_RECIPE_DEFAULT}" in current directory
+# * "${BTS_RECIPE_DEFAULT}" or ".${BTS_RECIPE_DEFAULT}" in BTS directory "${BTS_APP_DIR}"
 ### Find recipe
-BTS_RECIPE="${BTS_RECIPE:-}"
-if [ -z "${BTS_RECIPE}" -a $# -gt 0 ]; then BTS_RECIPE="$1" ; shift ; fi
-[ "${BTS_RECIPE}" -o ! -f "${BTS_RECIPE_DEFAULT}" ] || BTS_RECIPE="${BTS_RECIPE_DEFAULT}"
-[ -z "${BTS_RECIPE}" ] \
-  && cat<<EOF >&2 && bts_F "Usage error"
+if [ -z "${BTS_RECIPE:-}" ]
+then
+  for d_ in "" "${PWD}/" "${BTS_APP_DIR}/"
+  do
+    for r_ in "${BTS_RECIPE_DEFAULT}" ".${BTS_RECIPE_DEFAULT}"
+    do
+      [ -e "${d_}${r_}" ] && BTS_RECIPE="${d_}${r_}" && break
+    done
+  done
+fi
+[ -z "${BTS_RECIPE:-}" ] \
+  && bts_F "Usage error
 Recipe file not specified, default not found.
-Please provide recipe file in one of following ways:
-* with BTS_RECIPE env var
-* as first command line argument
-* as '${BTS_RECIPE_DEFAULT}' file in current directory
-EOF
+Please provide recipe file:
+
+* as BTS_RECIPE env var
+  or
+* as 1st positional argument
+  or
+* as "${BTS_RECIPE_DEFAULT}" or ".${BTS_RECIPE_DEFAULT}" in current directory
+  or
+* as "${BTS_RECIPE_DEFAULT}" or ".${BTS_RECIPE_DEFAULT}" in BTS directory ("${BTS_APP_DIR}")
+"
 
 BTS_RECIPE_DIR=${BTS_RECIPE%/*}
+bts_D "Start pid=$$"
+
 bts_D "recipe ${BTS_RECIPE}, dir ${BTS_RECIPE_DIR}"
 
 # Doesn't work
