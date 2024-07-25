@@ -256,6 +256,7 @@ bts_end()
     rm -f "${BTS_ROOT}/.disabled"
     date +%s > "${BTS_ROOT}/.updated"
   fi
+  return ${LAST_RC_}
 }
 trap bts_end EXIT ERR
 
