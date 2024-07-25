@@ -42,7 +42,7 @@ bts_F() {
     MESSAGE_PREFIX_+="(step ${BTS_STEP_ID}) "
     BTS_STEP_ID=$(( ${BTS_STEP_ID} - 1 ))
   fi
-  bts_L "\033[1;41;97mFATAL\033[0m ${MESSAGE_PREFIX_} $@" >&2
+  bts_L "\033[1;41;97mFATAL\033[0m ${MESSAGE_PREFIX_}$@" >&2
   exit ${BTS_RC}
 }
 export -f bts_F
@@ -249,7 +249,7 @@ bts_end()
 	then
 		cd "${BTS_WORK_DIR}"
 		touch "${BUILD_STEP_FILE}"
-		bts_N "Done"
+    bts_N "Done"
 	fi
 	if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
 	then
