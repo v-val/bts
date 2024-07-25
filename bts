@@ -2,8 +2,8 @@
 set -Eeuo pipefail
 
 BTS_APP_ID=${0##*/}
-BTS_APP_ID=${BTS_APP_ID%.*[Ss][Hh]}
-app_path=${0%/*}
+export BTS_APP_ID=${BTS_APP_ID%.*[Ss][Hh]}
+export BTS_APP_DIR="${0%/*}"
 
 bts_L() {
   echo -e "$(date +"%m/%d %H:%M:%S") ${BTS_APP_ID} $@"
