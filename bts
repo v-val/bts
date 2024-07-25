@@ -62,25 +62,51 @@ fi
 # * As BTS_RECIPE env
 #   or
 # * As 1st positional argument
-[ -z "${BTS_RECIPE:-}" -a $# -gt 0 ] && BTS_RECIPE="$1" && shift
+[ -z "${BTS_RECIPE:-}" -a $# -gt 0 ] \
+  && BTS_RECIPE="$1" && shift
 
 BTS_RECIPE_DEFAULT="${BTS_APP_ID}recipe"
 #
 # If neither of above provided, defaults will be tried:
 # * "${BTS_RECIPE_DEFAULT}" or ".${BTS_RECIPE_DEFAULT}" in current directory
 # * "${BTS_RECIPE_DEFAULT}" or ".${BTS_RECIPE_DEFAULT}" in BTS directory "${BTS_APP_DIR}"
-### Find recipe
-if [ -z "${BTS_RECIPE:-}" ]
-then
-  for d_ in "" "${PWD}/" "${BTS_APP_DIR}/"
+#
+# Find recipe - internal
+#
+bts_search_recipe_()
+{
+  local d_
+  for d_ in "$@"
   do
+    local r_
     for r_ in "${BTS_RECIPE_DEFAULT}" ".${BTS_RECIPE_DEFAULT}"
     do
-      [ -e "${d_}${r_}" ] && BTS_RECIPE="${d_}${r_}" && break
+      r_="${d_:+${d_}/}${r_}"
+      [ -e "${r_}" ] && echo "${r_}" && return
     done
   done
-fi
-[ -z "${BTS_RECIPE:-}" ] \
+}
+
+#
+# If BTS_RECIPE points to directory, we search for recipe file in it
+#
+[ -d "${BTS_RECIPE}" ] \
+  && bts_I "\"${BTS_RECIPE}\" is directory, searching recipe in it.." \
+  && BTS_RECIPE_SEARCH_DIR_="${BTS_RECIPE}" \
+  && BTS_RECIPE=$(bts_search_recipe_ "${BTS_RECIPE_SEARCH_DIR_}") \
+  && [ "${BTS_RECIPE}" ] && bts_I "Found recipe \"${BTS_RECIPE}\"" \
+  || true
+
+#
+# Last attempt to detect in
+#
+[ -z "${BTS_RECIPE}" ] \
+  && bts_D "Recipe not provided, checking defaults.." \
+  && BTS_RECIPE=$(bts_search_recipe_ "" "${PWD}/" "${BTS_APP_DIR}/") \
+  && [ "${BTS_RECIPE}" ] && bts_I "Found recipe \"${BTS_RECIPE}\"" \
+  || true
+
+[ -z "${BTS_RECIPE}" ] \
   && bts_F "Usage error
 Recipe file not specified, default not found.
 Please provide recipe file:
@@ -93,11 +119,19 @@ Please provide recipe file:
   or
 * as "${BTS_RECIPE_DEFAULT}" or ".${BTS_RECIPE_DEFAULT}" in BTS directory ("${BTS_APP_DIR}")
 "
-
-BTS_RECIPE_DIR=${BTS_RECIPE%/*}
+#
+# One is OK to continue
+#
 bts_D "Start pid=$$"
+#
+# Recipe dir might contain patches etc
+#
+BTS_RECIPE_DIR=${BTS_RECIPE%/*}
+BTS_RECIPE_DIR=${BTS_RECIPE_DIR%%/}
+[ "${BTS_RECIPE_DIR}" -ef "${BTS_RECIPE}" ] \
+  && BTS_RECIPE_DIR=.
 
-bts_D "recipe ${BTS_RECIPE}, dir ${BTS_RECIPE_DIR}"
+bts_D "recipe \"${BTS_RECIPE}\", dir \"${BTS_RECIPE_DIR}\""
 
 # Doesn't work
 #exec 3>&1 4>&2
