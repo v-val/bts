@@ -310,11 +310,19 @@ export -f bts_pkg
 
 bts_env()
 {
-	( \
-	  [ ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}" ;  \
-	  echo "env | egrep '^\S' | egrep '^BTS|PATH|FLAGS' | sort" >/dev/null ; \
-	  command "$@" \
+	(
+#	  set -x
+	  [ ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}"
+#	  env | egrep '^\S' | egrep '^BTS|PATH|FLAGS' | sort
+#	  bts_F "AAA"
+	  command "$@"
   )
+  local rc_=$?
+  : || bts_D "Command:
+  \"$@\"
+returned ${rc_}
+  "
+  return ${rc_}
 }
 export -f bts_env
 
