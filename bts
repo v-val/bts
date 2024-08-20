@@ -48,16 +48,6 @@ bts_F() {
 export -f bts_F
 
 #
-# Exec self to self + log
-#
-BTS_APP_WRAPPED_=${BTS_APP_WRAPPED_:-}
-if [ -z "${BTS_APP_WRAPPED_}" ]; then
-  exec env BTS_APP_WRAPPED_=1 bash -Eeuo pipefail -c "\"$0\" \"$@\" 2>&1 | tee -a \"${BTS_APP_ID}.log\""
-  BTS_RC=$? \
-    bts_F "\`exec\` returned ${RC_}"
-fi
-
-#
 # Recipe file name can be passed as follows: 
 # * As BTS_RECIPE env
 #   or
@@ -120,18 +110,40 @@ Please provide recipe file:
 * as "${BTS_RECIPE_DEFAULT}" or ".${BTS_RECIPE_DEFAULT}" in BTS directory ("${BTS_APP_DIR}")
 "
 #
-# One is OK to continue
-#
-bts_D "Start pid=$$"
-#
 # Recipe dir might contain patches etc
 #
 BTS_RECIPE_DIR=${BTS_RECIPE%/*}
 BTS_RECIPE_DIR=${BTS_RECIPE_DIR%%/}
 [ "${BTS_RECIPE_DIR}" -ef "${BTS_RECIPE}" ] \
   && BTS_RECIPE_DIR=.
-
-bts_D "recipe \"${BTS_RECIPE}\", dir \"${BTS_RECIPE_DIR}\""
+#
+# Recipe base name used for log file name
+#
+BTS_JOB_NAME=${BTS_JOB_NAME:-$(sed -Ee 's,[\._\-]?(bts[\._\-]?)?recipe$,,i' <<< "${BTS_RECIPE##*/}")}
+[ "${BTS_JOB_NAME}" ] || BTS_JOB_NAME=$(basename "${BTS_RECIPE%/*}")
+[ "${BTS_JOB_NAME}" ] || bts_F "Fail to determine job name, please set with BTS_JOB_NAME"
+#
+# Exec self to self + log
+#
+BTS_APP_WRAPPED_=${BTS_APP_WRAPPED_:-}
+if [ -z "${BTS_APP_WRAPPED_}" ]
+then
+  exec \
+    env \
+      BTS_APP_WRAPPED_=1 \
+      BTS_RECIPE="${BTS_RECIPE}" \
+      bash \
+        -Eeuo pipefail \
+        -c "\"$0\" \"$@\" 2>&1 | tee -a '${BTS_APP_ID}-${BTS_JOB_NAME}.log'"
+  BTS_RC=$? \
+    bts_F "\`exec\` returned ${BTS_RC}"
+fi
+#
+# One is OK to continue
+#
+bts_D "Start pid=$$"
+bts_I "Job name ${BTS_JOB_NAME}"
+bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
 
 # Doesn't work
 #exec 3>&1 4>&2
@@ -218,8 +230,8 @@ Toolchain tree defined:
 Prefix:        ${BTS_ROOT}
 Library path:  ${BTS_LIB_DIR}
 Includes path: ${BTS_INCLUDE_DIR}
-BTC path:      ${BTS_WORK_DIR}
-BTC profile:   ${BTS_PROFILE}
+BTS path:      ${BTS_WORK_DIR}
+BTS profile:   ${BTS_PROFILE}
 EOF
 	# Initialize step id
 	BTS_STEP_ID=0
@@ -242,6 +254,11 @@ export -f bts_init
 bts_end()
 {
   local LAST_RC_=$?
+  bts_D "
+  LAST_RC_    ${LAST_RC_}
+  BTS_STEP_ID ${BTS_STEP_ID:-}
+  BUILD_STEP_FILE ${BUILD_STEP_FILE:-}
+  "
 	if [ ${LAST_RC_} -eq 0 \
 	  -a "${BTS_STEP_ID:-}" -a ${BTS_STEP_ID:--1} -gt 0 \
 	  -a "${BUILD_STEP_FILE:-}" -a ! -f "${BUILD_STEP_FILE:-}" \
@@ -250,6 +267,8 @@ bts_end()
 		cd "${BTS_WORK_DIR}"
 		touch "${BUILD_STEP_FILE}"
     bts_N "Done"
+  else
+    bts_E "Step '${BTS_STEP_ID:--}' returned ${LAST_RC_}"
 	fi
 	if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
 	then
@@ -344,6 +363,7 @@ bts_make()
 export -f bts_make
 
 
+BTS_DEFAULT_BUILD_TYPE="Release"
 bts_cmake()
 {
   local GENERATOR_="Ninja Multi-Config"
@@ -354,6 +374,8 @@ bts_cmake()
   BTS_PROFILE="${BTS_PROFILE}" \
 	bts_env cmake \
 	  -G"${GENERATOR_}" \
+	  -DBUILD_TYPE="${BTS_BUILD_TYPE:-${BTS_DEFAULT_BUILD_TYPE}}" \
+	  -DCMAKE_BUILD_TYPE="${BTS_BUILD_TYPE:-${BTS_DEFAULT_BUILD_TYPE}}" \
 	  -DCMAKE_INSTALL_PREFIX=${BTS_CMAKE_INSTALL_PREFIX:-"${BTS_ROOT}"} \
 	  -DCMAKE_PREFIX_PATH="${BTS_ROOT}${BTS_CMAKE_PREFIX_PATH:+;${BTS_CMAKE_PREFIX_PATH}}" \
 	  "$@"
@@ -363,7 +385,7 @@ export -f bts_cmake
 
 bts_cmake_build_install()
 {
-  bts_env cmake --build . -j${BTS_NJOBS} --config="Release" --target install${BTS_CMAKE_INSTALL_TYPE:-"/strip"}
+  bts_env cmake --build . -j${BTS_NJOBS} --config="${BTS_BUILD_TYPE:-${BTS_DEFAULT_BUILD_TYPE}}" --target install${BTS_CMAKE_INSTALL_TYPE:-"/strip"}
 }
 export -f bts_cmake_build_install
 
