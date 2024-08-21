@@ -10,10 +10,20 @@ bts_L() {
 }
 export -f bts_L
 
+bts_T() {
+  bts_L "\033[2;90mtrace\033[0m" "$@"
+}
+export -f bts_T
+
 bts_D() {
   bts_L "\033[1;90mdebug\033[0m" "$@"
 }
 export -f bts_D
+
+#bts_V() {
+#  bts_L "\033[1;97minfo \033[0m" "$@"
+#}
+#export -f bts_V
 
 bts_I() {
   bts_L "\033[1;97minfo \033[0m" "$@"
