@@ -263,29 +263,33 @@ export -f bts_init
 
 bts_end()
 {
-  local LAST_RC_=$?
-  bts_D "
-  LAST_RC_    ${LAST_RC_}
-  BTS_STEP_ID ${BTS_STEP_ID:-}
-  BUILD_STEP_FILE ${BUILD_STEP_FILE:-}
-  "
-	if [ ${LAST_RC_} -eq 0 \
-	  -a "${BTS_STEP_ID:-}" -a ${BTS_STEP_ID:--1} -gt 0 \
-	  -a "${BUILD_STEP_FILE:-}" -a ! -f "${BUILD_STEP_FILE:-}" \
-	  ]
-	then
-		cd "${BTS_WORK_DIR}"
-		touch "${BUILD_STEP_FILE}"
-    bts_N "Done"
-  else
-    bts_E "Step '${BTS_STEP_ID:--}' returned ${LAST_RC_}"
-	fi
+  BTS_END_LAST_RC=${BTS_END_LAST_RC:-$?}
+  BTS_END_CALL_COUNT=$(( ${BTS_END_CALL_COUNT:-0} + 1 ))
+#  bts_T "
+#  Last RC ${BTS_END_LAST_RC}
+#  Step ${BTS_STEP_ID:-}
+#  CC ${BTS_END_CALL_COUNT}
+#  "
+  if [ ${BTS_END_CALL_COUNT} -eq 1 ]
+  then
+    if [ ${BTS_END_LAST_RC} -eq 0 \
+      -a "${BTS_STEP_ID:-}" -a ${BTS_STEP_ID:--1} -gt 0 \
+      ]
+    then
+      cd "${BTS_WORK_DIR}"
+      bts_N "Done"
+    else
+      bts_E "Step '${BTS_STEP_ID:--}' returned ${BTS_END_LAST_RC}"
+    fi
+  fi
+
 	if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
 	then
     rm -f "${BTS_ROOT}/.disabled"
     date +%s > "${BTS_ROOT}/.updated"
   fi
-  return ${LAST_RC_}
+
+  return ${BTS_END_LAST_RC}
 }
 trap bts_end EXIT ERR
 
@@ -402,29 +406,55 @@ export -f bts_cmake_build_install
 
 bts_step()
 {
+  # `bts_step` opens and closes BTS scopes
+  # @param BTS_SCOPE_NAME_ - mandatory, must be non-empty
+  # First call opens the scope
+  # Second call closes one
+
+  # Check usage
+  [ $# -gt 0 ] || bts_F "\`bts_step\`: mandatory argument(s) missing"
+  local BTS_SCOPE_NAME_="$@"
+
+  # Ensure that work dir exists
 	[ -d "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
 	cd "${BTS_WORK_DIR}"
-#	echo "  * Changed to ${PWD}"
 
-	if [ "${BTS_STEP_ID}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
+  # ID identifies current scope with file system entries
+  local BTS_SCOPE_ID_=$(perl -pe 's,[^\w\.]+,-,g; s,^\-|\-$,,g' <<< "${BTS_SCOPE_NAME_}")
+  local BTS_SCOPE_FLAG_FILE_="${BTS_WORK_DIR}/.bts.${BTS_SCOPE_ID_}"
+
+  # V identifies current scope with shell variables
+  local BTS_SCOPE_V_="BTS_SCOPE_V_"$(perl -pe 's,\W+,_,g; s,^_|_$,,g;' <<< "${BTS_SCOPE_ID_}")"_"
+
+	# Evaluate count this step was called
+	local BTS_SCOPE_V_C_="${BTS_SCOPE_V_}CALL_C_"
+	eval ${BTS_SCOPE_V_C_}="\$(( \${${BTS_SCOPE_V_C_}:-0} + 1 ))"
+	eval local BTS_SCOPE_STATUS_="\${${BTS_SCOPE_V_C_}}"
+
+	# Step number
+	BTS_STEP_ID=$(( ${BTS_STEP_ID:-0} + 1 ))
+
+	bts_T "${BTS_SCOPE_NAME_} (#${BTS_STEP_ID}): status ${BTS_SCOPE_STATUS_} file ${BTS_SCOPE_FLAG_FILE_} "$([ -e "${BTS_SCOPE_FLAG_FILE_}" ] && echo "EXISTS" || echo "MISSING")
+
+  # Check status
+	if [ ${BTS_SCOPE_STATUS_} -eq 1 -a -f "${BTS_SCOPE_FLAG_FILE_}" ]
 	then
-		touch "${BUILD_STEP_FILE}"
+	  bts_I "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
+	  bts_I "Skip [already done]"
+	  return 1
+	elif [ ${BTS_SCOPE_STATUS_} -eq 2 ]
+	then
+		touch "${BTS_SCOPE_FLAG_FILE_}"
 		bts_I "Done"
-	fi
-
-	BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
-	local BUILD_STEP_DESC_=${BTS_STEP_DESC:-"$1"}
-	[ "${BUILD_STEP_DESC_}" ] || bts_F "Required BTS_STEP_DESC missing!"
-	local BUILD_STEP_TAG_=$(perl -pe 's,[^\w\.]+,-,gi; s,^\-|\-$,,g' <<< "${BUILD_STEP_DESC_}")
-	BUILD_STEP_FILE=".${BTS_APP_ID}.${BUILD_STEP_TAG_}"
-
-	bts_N "${BTS_STEP_ID} ${BUILD_STEP_DESC_}"
-	if [ -f "${BUILD_STEP_FILE}" ]
-	then
-		bts_I "Skip [already done]"
 		return 1
+	elif [ ${BTS_SCOPE_STATUS_} -ne 1 ]
+	then
+	  bts_F "logic error: step '${BTS_SCOPE_NAME_}' (#${BTS_STEP_ID}) got status ${BTS_SCOPE_STATUS_}"
 	fi
 
+	bts_N "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
+
+  # Todo: make below vars local
 	TAG=
 	ARCHIEVED_DIR=
 	BTS_GET_DIR=
