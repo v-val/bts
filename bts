@@ -561,7 +561,7 @@ bts_get()
 	else
 	  local archive_type_
 	  local extract_fn_
-	  if echo "${file}" | egrep -iqs '\.(tar|t(ar\.)?(gz|bz2?|xz))$'
+	  if egrep -iqs '\.(tar|t(ar\.)?(gz|bz2?|xz))$' <<< "${file}"
     then
       archive_type_="tar"
       extract_fn_="bts_untar"
@@ -570,7 +570,7 @@ bts_get()
     then
       archive_type_="zip"
       extract_fn_="bts_unzip"
-      dir=$(sed -e 's,\.zip$,,i' <<< "${file}")
+      dir=$(sed -Ee 's,\.zip$,,i' <<< "${file}")
     else
 			bts_F "Unsupported archive ${file}"
 		fi
@@ -590,7 +590,7 @@ bts_get()
     fi
     if [ "${BTS_NOCD:-}" ]
     then
-      true
+      :
     elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
     then
       cd "${BTS_EXTRACT_DIR}"
