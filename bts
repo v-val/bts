@@ -380,7 +380,7 @@ export -f bts_make
 BTS_DEFAULT_BUILD_TYPE="Release"
 bts_cmake()
 {
-  local GENERATOR_="Ninja Multi-Config"
+  local GENERATOR_=${BTS_CMAKE_GENERATOR_:-"Ninja Multi-Config"}
   local DASH_G_
   DASH_G_=-G"${GENERATOR_}"
   bts_N "Use '${GENERATOR_}'"
