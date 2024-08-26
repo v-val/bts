@@ -374,7 +374,8 @@ bts_make()
 export -f bts_make
 
 
-BTS_DEFAULT_BUILD_TYPE="Release"
+# Should be done in `init`
+export BTS_DEFAULT_BUILD_TYPE="Release"
 bts_cmake()
 {
   local GENERATOR_=${BTS_CMAKE_GENERATOR_:-"Ninja Multi-Config"}
