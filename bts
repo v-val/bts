@@ -505,9 +505,38 @@ export -f bts_build_dir
 bts_untar()
 {
   local FILE_="$1"
-  local ARGS_="x"
-  [[ "${FILE_}" =~ 'xz$' ]] && ARGS_+="J"
-  bts_env tar ${ARGS_}f "$@"
+  shift
+  # Exactly one positional parameter accepted
+  [ $# -eq 0 ] || bts_F "\`bts_untar\`: unexpected usage \`bts_untar \"${FILE}\" \"$@\"\`"
+  local ARGS_=
+  local TR_=
+  case "${FILE_}" in
+  *[Gg][Zz])
+    ARGS_="z"
+    ;;
+  *[Bb][Zz]|*[Bb][Zz]2|*[Bb][Zz][Ii][Pp]|*[Bb][Zz][Ii][Pp]2)
+    ARGS_="j"
+    ;;
+  *[Xx][Zz])
+    ARGS_="J"
+    ;;
+  *[Tt][Aa][Rr])
+    ;;
+  *)
+    bts_F "Don't know how to extract '${FILE_}'"
+    ;;
+  esac
+#  bts_W "BTS_GET_TOP_DIR '${BTS_GET_TOP_DIR:-}'"
+  local TOPDIR_EXPECTED_=${BTS_GET_TOP_DIR:-$(sed -Ee 's,\.t(ar\.)?(gz|[bl]z(ip)?2?|xz)$,,' <<< "${FILE_}")}
+  #
+  # TODO: handle archives with multiple top directories
+  # One has `for` here because `$()` returns some trailing garbage one failed to remove
+  for TOPDIR_ in $(tar t${ARGS_}f ${FILE_} | head -1 | sed -s 's,/.*,,' || true)
+  do
+    [ "${TOPDIR_}" == "${TOPDIR_EXPECTED_}" ] || TR_="--transform=s,^${TOPDIR_%%/*},${TOPDIR_EXPECTED_},"
+  done
+#  bts_T "untar command: bts_env tar x${ARGS_}f \"${FILE_}\" ${TR_}"
+  bts_env tar x${ARGS_}f "${FILE_}" ${TR_}
 }
 export -f bts_untar
 
