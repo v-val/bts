@@ -492,7 +492,7 @@ bts_step()
 	eval local BTS_SCOPE_STATUS_="\${${BTS_SCOPE_V_C_}}"
 
 	# Step number
-	BTS_STEP_ID=$(( ${BTS_STEP_ID:-0} + 1 ))
+	BTS_STEP_ID=${BTS_STEP_ID:-1}
 
 	bts_T "${BTS_SCOPE_NAME_} (#${BTS_STEP_ID}): status ${BTS_SCOPE_STATUS_}, ${BTS_SCOPE_FLAG_FILE_##*/} "$([ -e "${BTS_SCOPE_FLAG_FILE_}" ] && echo "EXISTS" || echo "MISSING")
 
@@ -501,6 +501,7 @@ bts_step()
 	then
 	  bts_I "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
 	  bts_I "Skip [already done]"
+	  BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
 	  return 1
 	elif [ ${BTS_SCOPE_STATUS_} -eq 2 ]
 	then
@@ -508,6 +509,7 @@ bts_step()
 		# Global, to enable access from `bts_F` and in similar cases
 		BTS_STEP_IS_IN_PROGRESS=
 		bts_I "Done"
+		BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
 		return 1
 	elif [ ${BTS_SCOPE_STATUS_} -ne 1 ]
 	then
