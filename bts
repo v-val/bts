@@ -243,9 +243,6 @@ Includes path: ${BTS_INCLUDE_DIR}
 BTS path:      ${BTS_WORK_DIR}
 BTS profile:   ${BTS_PROFILE}
 EOF
-	# Initialize step id
-	BTS_STEP_ID=0
-	BUILD_STEP_FILE=
 	#
 	BTS_SUDO=${BTS_SUDO:-}
 	export BTS_CMAKE_PREFIX_PATH=${BTS_CMAKE_PREFIX_PATH:-}
@@ -413,7 +410,9 @@ bts_step()
 
   # Check usage
   [ $# -gt 0 ] || bts_F "\`bts_step\`: mandatory argument(s) missing"
-  local BTS_SCOPE_NAME_="$@"
+  #
+  # Scope name is global to enable use in `bts_F
+  BTS_SCOPE_NAME_="$@"
 
   # Ensure that work dir exists
 	[ -d "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
@@ -434,7 +433,7 @@ bts_step()
 	# Step number
 	BTS_STEP_ID=$(( ${BTS_STEP_ID:-0} + 1 ))
 
-	bts_T "${BTS_SCOPE_NAME_} (#${BTS_STEP_ID}): status ${BTS_SCOPE_STATUS_} file ${BTS_SCOPE_FLAG_FILE_} "$([ -e "${BTS_SCOPE_FLAG_FILE_}" ] && echo "EXISTS" || echo "MISSING")
+	bts_T "${BTS_SCOPE_NAME_} (#${BTS_STEP_ID}): status ${BTS_SCOPE_STATUS_}, ${BTS_SCOPE_FLAG_FILE_##*/} "$([ -e "${BTS_SCOPE_FLAG_FILE_}" ] && echo "EXISTS" || echo "MISSING")
 
   # Check status
 	if [ ${BTS_SCOPE_STATUS_} -eq 1 -a -f "${BTS_SCOPE_FLAG_FILE_}" ]
@@ -445,6 +444,8 @@ bts_step()
 	elif [ ${BTS_SCOPE_STATUS_} -eq 2 ]
 	then
 		touch "${BTS_SCOPE_FLAG_FILE_}"
+		# Global, to enable access from `bts_F` and in similar cases
+		BTS_STEP_IS_IN_PROGRESS=
 		bts_I "Done"
 		return 1
 	elif [ ${BTS_SCOPE_STATUS_} -ne 1 ]
@@ -464,6 +465,9 @@ bts_step()
 	BTS_CURRENT_SOURCE_DIR=
 	BTS_CURRENT_BUILD_DIR=
 
+  # Global - to enable `bts_F` and similars to distinguish errors in
+  # scopes from ones outside of scopes
+  BTS_STEP_IS_IN_PROGRESS=1
 	return 0
 }
 export -f bts_step
