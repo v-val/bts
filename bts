@@ -369,7 +369,7 @@ export -f bts_configure
 
 bts_make()
 {
-	bts_env make -j${BTS_NJOBS} "$@"
+	bts_env "${BTS_COMMAND_MAKE:-make}" -j${BTS_NJOBS} "$@"
 }
 export -f bts_make
 
