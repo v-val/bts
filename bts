@@ -276,7 +276,8 @@ bts_init()
 	export BTS_INCLUDE_DIR="${BTS_ROOT}/include"
 	[ -d "${BTS_INCLUDE_DIR}" ] || mkdir -p "${BTS_INCLUDE_DIR}"
 	# Top dir for source and build dirs
-	export BTS_WORK_DIR="${BTS_ROOT}/.${BTS_APP_ID}"
+	local BTS_WORK_PARENT_DIR_="${BTS_ROOT%/*}"
+	export BTS_WORK_DIR="${BTS_WORK_PARENT_DIR_%%/}/.${BTS_APP_ID}.${BTS_ROOT##*/}"
 	[ -e "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
 	(pushd . >/dev/null 2>&1; cd "${BTS_WORK_DIR}" ; popd >/dev/null 2>&1)
 	# Conf dir, now storing only profile
