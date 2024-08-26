@@ -617,6 +617,7 @@ bts_get()
       archive_type_="tar"
       extract_fn_="bts_untar"
       dir=$(echo "${file}" | perl -pe 's,\.(tar|t(ar\.)?(gz|bz2?|xz))$,,i')
+      bts_D "File '${file}', expected dir '${dir}'"
     elif egrep -iqs '\.zip$' <<< "${file}"
     then
       archive_type_="zip"
@@ -629,7 +630,7 @@ bts_get()
     [ "${ARCHIEVED_DIR}" ] \
       && dir="${ARCHIEVED_DIR}"
     # Fetch file
-		[ -f "${file}" ] || curl -nL -o "${file}" "${url}"
+		[ -f "${file}" ] || curl -#nL -o "${file}" "${url}"
     # Extract file
     if [ "${BTS_GET_DIR:-}" ]
     then
@@ -642,6 +643,9 @@ bts_get()
     if [ "${BTS_NOCD:-}" ]
     then
       :
+    elif [ "${BTS_GET_TOP_DIR:-}" ]
+    then
+      cd "${BTS_GET_TOP_DIR}"
     elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
     then
       cd "${BTS_EXTRACT_DIR}"
