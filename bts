@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Version, checked with bts_require
+BTS_CURRENT_VERSION=0.2
+
 BTS_APP_ID=${0##*/}
 export BTS_APP_ID=${BTS_APP_ID%.*[Ss][Hh]}
 export BTS_APP_DIR="${0%/*}"
@@ -78,6 +81,18 @@ bts_F() {
   exit ${BTS_RC}
 }
 export -f bts_F
+
+# Recipes may declare required version
+bts_required_version()
+{
+  [ $# -eq 1 ] || bts_F '`bts_required_version`: exactly one positional argument expected'
+  local user_required_version_="$1"
+  # User required BTS version must be less or equal to current BTS version
+  [ "${user_required_version_}" \< "${BTS_CURRENT_VERSION}" -o "${user_required_version_}" = "${BTS_CURRENT_VERSION}" ] \
+    || \
+    bts_F "Recipe needs BTS v${user_required_version_} or later"
+}
+export -f bts_required_version
 
 #
 # Recipe file name can be passed as follows: 
