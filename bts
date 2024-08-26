@@ -166,7 +166,7 @@ BTS_RECIPE_DIR=${BTS_RECIPE_DIR%%/}
 #
 # Recipe base name used for log file name
 #
-BTS_JOB_NAME=${BTS_JOB_NAME:-$(sed -Ee 's,[\._\-]?(bts[\._\-]?)?recipe$,,i' <<< "${BTS_RECIPE##*/}")}
+BTS_JOB_NAME=${BTS_JOB_NAME:-$(sed -Ee 's,[\._\-]?('"${BTS_APP_ID}"'[\._\-]?)?recipe$,,i' <<< "${BTS_RECIPE##*/}")}
 [ "${BTS_JOB_NAME}" ] || BTS_JOB_NAME=$(basename "${BTS_RECIPE%/*}")
 [ "${BTS_JOB_NAME}" ] || bts_F "Fail to determine job name, please set with BTS_JOB_NAME"
 #
@@ -458,7 +458,7 @@ bts_step()
 
   # ID identifies current scope with file system entries
   local BTS_SCOPE_ID_=$(perl -pe 's,[^\w\.]+,-,g; s,^\-|\-$,,g' <<< "${BTS_SCOPE_NAME_}")
-  local BTS_SCOPE_FLAG_FILE_="${BTS_WORK_DIR}/.bts.${BTS_SCOPE_ID_}"
+  local BTS_SCOPE_FLAG_FILE_="${BTS_WORK_DIR}/.${BTS_APP_ID}.${BTS_SCOPE_ID_}"
 
   # V identifies current scope with shell variables
   local BTS_SCOPE_V_="BTS_SCOPE_V_"$(perl -pe 's,\W+,_,g; s,^_|_$,,g;' <<< "${BTS_SCOPE_ID_}")"_"
