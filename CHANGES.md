@@ -10,7 +10,7 @@
   doesn't work with `tar` on MacOS).
 * Logging respects `${BTS_LOG_LEVEL}` environment variable
 * `bts_make` enables overriding command `make` with value of `${BTS_COMMAND_MAKE}` 
-
+* `BTS_CONFIGURE_PREFIX` replaces `BTS_CONFIGURE_ROOT`
 ## 2024 August 20
 
 * ___Job name___ derived from recipe pathname.
