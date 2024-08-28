@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # Version, checked with bts_require
-BTS_VERSION=0.2
+export BTS_VERSION=0.2
 
 #
 # Runtime constants
