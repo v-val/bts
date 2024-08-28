@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # Version, checked with bts_require
-BTS_CURRENT_VERSION=0.2
+BTS_VERSION=0.2
 
 #
 # Runtime constants
@@ -273,7 +273,7 @@ bts_required_version()
   [ $# -eq 1 ] || bts_F '`bts_required_version`: exactly one positional argument expected'
   local user_required_version_="$1"
   # User required BTS version must be less or equal to current BTS version
-  [ "${user_required_version_}" \< "${BTS_CURRENT_VERSION}" -o "${user_required_version_}" = "${BTS_CURRENT_VERSION}" ] \
+  [ "${user_required_version_}" \< "${BTS_VERSION}" -o "${user_required_version_}" = "${BTS_VERSION}" ] \
     || \
     bts_F "Recipe needs BTS v${user_required_version_} or later"
 }
