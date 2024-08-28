@@ -4,9 +4,17 @@ set -Eeuo pipefail
 # Version, checked with bts_require
 BTS_CURRENT_VERSION=0.2
 
+#
+# Runtime constants
+#
 BTS_APP_ID=${0##*/}
 export BTS_APP_ID=${BTS_APP_ID%.*[Ss][Hh]}
 export BTS_APP_DIR="${0%/*}"
+
+#
+# Logging
+#
+# Levels
 BTS_LOG_LEVEL_TRACE=7
 BTS_LOG_LEVEL_DEBUG=6
 BTS_LOG_LEVEL_VERBOSE=5
@@ -17,12 +25,14 @@ BTS_LOG_LEVEL_ERROR=1
 BTS_LOG_LEVEL_FATAL=0
 BTS_DEFAULT_LOG_LEVEL=${BTS_LOG_LEVEL_NOTICE}
 BTS_LOG_LEVEL=${BTS_LOG_LEVEL:-${BTS_DEFAULT_LOG_LEVEL}}
-
+#
+# Logging backend function
 bts_L() {
   echo -e "$(date +"%m/%d %H:%M:%S") ${BTS_APP_ID} $@"
 }
 export -f bts_L
-
+#
+# Logging functions for severity logging
 bts_T() {
   [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_TRACE} ] || bts_L "\033[2;90mtrace\033[0m" "$@"
 }
@@ -33,10 +43,10 @@ bts_D() {
 }
 export -f bts_D
 
-#bts_V() {
-#  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_VERBOSE} ] || bts_L "\033[1;97minfo \033[0m" "$@"
-#}
-#export -f bts_V
+bts_V() {
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_VERBOSE} ] || bts_L "\033[3;97mverbo \033[0m" "$@"
+}
+export -f bts_V
 
 bts_I() {
   [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_INFO} ] || bts_L "\033[1;97minfo \033[0m" "$@"
