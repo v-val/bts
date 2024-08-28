@@ -223,14 +223,14 @@ export BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
 BTS_OS_FAMILY=
 BTS_OS_FAMILY_EL="EL"
 Platform_EL=
-case ${OSTYPE} in
-[Mm][Ss][Yy][Ss])
+case ${OSTYPE,,} in
+msys)
 	BTS_OS_FAMILY=msys
 	;;
-[Cc][Yy][Gg][Ww][Ii][Nn])
+cygwin)
 	BTS_OS_FAMILY=cygwin
 	;;
-[Ll][Ii][Nn][Uu][Xx]*)
+linux*)
 	if [ -f "/etc/redhat-release" ]
 	then
 	  export BTS_OS_FAMILY=${BTS_OS_FAMILY_EL}
@@ -239,11 +239,11 @@ case ${OSTYPE} in
 		Platform_EL=${BTS_OS_FAMILY_GENERATION}
     bts_D "Detected platform ${BTS_OS_FAMILY_GENERATION}"
 	else
-		bts_F "Unsupported ${OSTYPE} family"
+		bts_F "Unsupported OS family ${OSTYPE}"
 	fi
 	;;
 *)
-	bts_F "Unsupported platform ${OSTYPE}"
+	bts_F "Unsupported OS ${OSTYPE}"
 	;;
 esac
 
