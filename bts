@@ -92,18 +92,9 @@ bts_F() {
 }
 export -f bts_F
 
-# Recipes may declare required version
-bts_required_version()
-{
-  [ $# -eq 1 ] || bts_F '`bts_required_version`: exactly one positional argument expected'
-  local user_required_version_="$1"
-  # User required BTS version must be less or equal to current BTS version
-  [ "${user_required_version_}" \< "${BTS_CURRENT_VERSION}" -o "${user_required_version_}" = "${BTS_CURRENT_VERSION}" ] \
-    || \
-    bts_F "Recipe needs BTS v${user_required_version_} or later"
-}
-export -f bts_required_version
-
+#
+# Pre-wrap initialization
+# At the moment it's only check that the recipe is provided
 #
 # Recipe file name can be passed as follows: 
 # * As BTS_RECIPE env
@@ -249,6 +240,19 @@ case ${OSTYPE} in
 	bts_F "Unsupported platform ${OSTYPE}"
 	;;
 esac
+#
+# `bts_required_version` declares required version and verifies
+# that actual version is ok
+bts_required_version()
+{
+  [ $# -eq 1 ] || bts_F '`bts_required_version`: exactly one positional argument expected'
+  local user_required_version_="$1"
+  # User required BTS version must be less or equal to current BTS version
+  [ "${user_required_version_}" \< "${BTS_CURRENT_VERSION}" -o "${user_required_version_}" = "${BTS_CURRENT_VERSION}" ] \
+    || \
+    bts_F "Recipe needs BTS v${user_required_version_} or later"
+}
+export -f bts_required_version
 
 
 # Sets BTS_ROOT and other common vars, creates directory structure
