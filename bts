@@ -77,13 +77,13 @@ bts_F() {
   fi
   local MESSAGE_PREFIX_="("
   if [ "${BTS_STEP_ID:-}" ]; then
-    if [ "${BTS_STEP_IS_IN_PROGRESS:-}" ]
+    if bts_step_is_in_progress_
     then
       MESSAGE_PREFIX_+="in "
     else
       MESSAGE_PREFIX_+="after "
     fi
-    MESSAGE_PREFIX_+="step ${BTS_STEP_ID}"
+    MESSAGE_PREFIX_+="step ${BTS_STEP_ID} \"${BTS_SCOPE_NAME_}\""
   fi
   [ ${LAST_RC} -eq 0 ] || MESSAGE_PREFIX_+=" command returned ${LAST_RC}"
   [ "${MESSAGE_PREFIX_}" = "(" ] && MESSAGE_PREFIX_= || MESSAGE_PREFIX_+=") "
@@ -91,6 +91,24 @@ bts_F() {
   exit ${BTS_RC}
 }
 export -f bts_F
+
+
+bts_step_is_in_progress_() {
+  [ "${BTS_STEP_START_TIME_:-}" ]
+}
+
+
+bts_get_timestamp_() {
+  date +%s%N
+}
+export -f bts_get_timestamp_
+
+
+bts_get_duration_() {
+  [ $# -eq 2 -a ${1:-1} -gt 0 -a ${2:-1} -gt 0 ] || bts_F "\`bts_get_duration_\`: arguments should be two positive integers"
+  perl -pe '$_ /= 100' <<< $(( ( ${2} - ${1} ) / 10000000 ))
+}
+export -f bts_get_duration_
 
 #
 # Pre-wrap initialization
@@ -189,6 +207,7 @@ fi
 #
 # One is OK to continue
 #
+BTS_JOB_START_TIME_=$(bts_get_timestamp_)
 bts_D "Start pid=$$"
 bts_I "Job name ${BTS_JOB_NAME}"
 bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
@@ -374,21 +393,30 @@ bts_end()
 #  "
   if [ ${BTS_END_CALL_COUNT} -eq 1 ]
   then
+    BTS_JOB_FINISH_TIME_=$(bts_get_timestamp_)
+    BTS_JOB_DURATION_=$(bts_get_duration_ ${BTS_JOB_START_TIME_} ${BTS_JOB_FINISH_TIME_})
+    BTS_JOB_DURATION_S_=" in ${BTS_JOB_DURATION_} seconds"
+    ###
     if [ ${BTS_END_LAST_RC} -eq 0 \
       -a "${BTS_STEP_ID:-}" -a ${BTS_STEP_ID:--1} -gt 0 \
       ]
     then
-      cd "${BTS_WORK_DIR}"
-      bts_N "Done"
+#      cd "${BTS_WORK_DIR}"
+      bts_N "Done${BTS_JOB_DURATION_S_}"
+    elif bts_step_is_in_progress_; then
+      bts_E "Step ${BTS_STEP_ID} ${BTS_SCOPE_NAME_} returned ${BTS_END_LAST_RC}${BTS_JOB_DURATION_S_}"
     else
-      bts_E "Step '${BTS_STEP_ID:--}' returned ${BTS_END_LAST_RC}"
+      local MESSAGE_PREFIX_=""
+      [ -z "${BTS_STEP_ID:-}" ] || MESSAGE_PREFIX_=" (after step ${BTS_STEP_ID} \"${BTS_SCOPE_NAME_}\")"
+      bts_E "${BTS_RECIPE##*/}:${BASH_LINENO}${MESSAGE_PREFIX_} RC ${BTS_END_LAST_RC}"
+      bts_E "Failed${BTS_JOB_DURATION_S_}"
     fi
   fi
 
 	if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
 	then
     rm -f "${BTS_ROOT}/.disabled"
-    date +%s > "${BTS_ROOT}/.updated"
+    bts_get_timestamp_ > "${BTS_ROOT}/.updated"
   fi
 
   return ${BTS_END_LAST_RC}
@@ -552,10 +580,12 @@ bts_step()
 	  return 1
 	elif [ ${BTS_SCOPE_STATUS_} -eq 2 ]
 	then
-		touch "${BTS_SCOPE_FLAG_FILE_}"
+	  BTS_STEP_FINISH_TIME_=$(bts_get_timestamp_)
+	  BTS_STEP_DURATION_=$(bts_get_duration_ ${BTS_STEP_START_TIME_} ${BTS_STEP_FINISH_TIME_})
+		echo "${BTS_STEP_START_TIME_} ${BTS_STEP_DURATION_}" > "${BTS_SCOPE_FLAG_FILE_}"
 		# Global, to enable access from `bts_F` and in similar cases
-		BTS_STEP_IS_IN_PROGRESS=
-		bts_I "Done"
+    BTS_STEP_START_TIME_=
+		bts_I "Done in ${BTS_STEP_DURATION_} seconds"
 		BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
 		return 1
 	elif [ ${BTS_SCOPE_STATUS_} -ne 1 ]
@@ -577,7 +607,7 @@ bts_step()
 
   # Global - to enable `bts_F` and similars to distinguish errors in
   # scopes from ones outside of scopes
-  BTS_STEP_IS_IN_PROGRESS=1
+  BTS_STEP_START_TIME_=$(bts_get_timestamp_)
 	return 0
 }
 export -f bts_step
