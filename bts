@@ -313,7 +313,7 @@ bts_init()
   # Default BTS_ROOT name is ${BTS_JOB_NAME}[-${BTS_JOB_VERSION}]
   # where BTS_JOB_NAME taken from recipe file name
   # and BTS_JOB_VERSION taken from variable named "${BTS_JOB_NAME^^}_VERSION"
-  local BTS_V_JOB_VERSION="${BTS_JOB_NAME^^}_VERSION"
+  local BTS_V_JOB_VERSION=$(sed -Ee 's,\W+,_,g; s,^_+,,' <<< "${BTS_JOB_NAME^^}_VERSION")
   eval local BTS_JOB_VERSION='$'${BTS_V_JOB_VERSION}
   local BTS_ROOT_DEFAULT_NAME="${BTS_JOB_NAME}${BTS_JOB_VERSION:+-${BTS_JOB_VERSION}}"
   #
@@ -587,6 +587,7 @@ bts_step()
 	  bts_I "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
 	  bts_I "Skip [already done]"
 	  BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
+	  BTS_STEP_START_TIME_=
 	  BTS_NSTEPS_SKIPPED_=$(( ${BTS_NSTEPS_SKIPPED_} + 1 ))
 	  return 1
 	elif [ ${BTS_SCOPE_STATUS_} -eq 2 ]
@@ -607,6 +608,7 @@ bts_step()
   # Actual step starts here
   # so does initialization of step-related variables
   BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
+  BTS_STEP_START_TIME_=$(bts_get_timestamp_)
 	bts_N "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
 
   # Todo: make below vars local
