@@ -526,7 +526,7 @@ bts_cmake()
   local GENERATOR_=${BTS_CMAKE_GENERATOR_:-"Ninja Multi-Config"}
   local DASH_G_
   DASH_G_=-G"${GENERATOR_}"
-  bts_N "Use '${GENERATOR_}'"
+  bts_V "Use '${GENERATOR_}'"
 #  bts_D "Command: cmake -G\"${GENERATOR_}\" -DCMAKE_INSTALL_PREFIX=\"${BTS_ROOT}\" -DCMAKE_PREFIX_PATH=\"${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}\" \"$@\""
   BTS_PROFILE="${BTS_PROFILE}" \
 	bts_env cmake \
