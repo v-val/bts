@@ -105,7 +105,7 @@ export -f bts_get_timestamp_
 
 
 bts_get_duration_() {
-  [ $# -eq 2 -a ${1:-1} -gt 0 -a ${2:-1} -gt 0 ] || bts_F "\`bts_get_duration_\`: arguments should be two positive integers"
+  [ $# -eq 2 -a ${1:-1} -gt 0 -a ${2:-1} -gt 0 ] || bts_F "\`bts_get_duration_\`: expected two positive integers, got $@"
   perl -pe '$_ /= 100' <<< $(( ( ${2} - ${1} ) / 10000000 ))
 }
 export -f bts_get_duration_
@@ -205,9 +205,14 @@ then
     bts_F "\`exec\` returned ${BTS_RC}"
 fi
 #
-# One is OK to continue
+# Script is exec'uting with STDOUT and STDERR redirected to log.
+# One is OK to continue.
 #
 BTS_JOB_START_TIME_=$(bts_get_timestamp_)
+bts_D "BTS_JOB_START_TIME_ ${BTS_JOB_START_TIME_}"
+BTS_NSTEPS_PASSED_=0
+BTS_NSTEPS_SKIPPED_=0
+BTS_STEP_START_TIME_=
 bts_D "Start pid=$$"
 bts_I "Job name ${BTS_JOB_NAME}"
 bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
@@ -413,6 +418,11 @@ bts_end()
     fi
   fi
 
+  local STEPS_SUMMARY_S_=$(( ${BTS_NSTEPS_PASSED_} + ${BTS_NSTEPS_SKIPPED_} ))" steps:"
+  [ ${BTS_NSTEPS_SKIPPED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_SKIPPED_} done already"
+  [ ${BTS_NSTEPS_PASSED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_PASSED_} executed"
+  bts_I "${STEPS_SUMMARY_S_}"
+
 	if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
 	then
     rm -f "${BTS_ROOT}/.disabled"
@@ -577,6 +587,7 @@ bts_step()
 	  bts_I "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
 	  bts_I "Skip [already done]"
 	  BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
+	  BTS_NSTEPS_SKIPPED_=$(( ${BTS_NSTEPS_SKIPPED_} + 1 ))
 	  return 1
 	elif [ ${BTS_SCOPE_STATUS_} -eq 2 ]
 	then
@@ -586,13 +597,16 @@ bts_step()
 		# Global, to enable access from `bts_F` and in similar cases
     BTS_STEP_START_TIME_=
 		bts_I "Done in ${BTS_STEP_DURATION_} seconds"
-		BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
+		BTS_NSTEPS_PASSED_=$(( ${BTS_NSTEPS_PASSED_} + 1 ))
 		return 1
 	elif [ ${BTS_SCOPE_STATUS_} -ne 1 ]
 	then
 	  bts_F "logic error: step '${BTS_SCOPE_NAME_}' (#${BTS_STEP_ID}) got status ${BTS_SCOPE_STATUS_}"
 	fi
 
+  # Actual step starts here
+  # so does initialization of step-related variables
+  BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
 	bts_N "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
 
   # Todo: make below vars local
@@ -607,7 +621,6 @@ bts_step()
 
   # Global - to enable `bts_F` and similars to distinguish errors in
   # scopes from ones outside of scopes
-  BTS_STEP_START_TIME_=$(bts_get_timestamp_)
 	return 0
 }
 export -f bts_step
