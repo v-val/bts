@@ -416,17 +416,17 @@ bts_end()
       bts_E "${BTS_RECIPE##*/}:${BASH_LINENO}${MESSAGE_PREFIX_} RC ${BTS_END_LAST_RC}"
       bts_E "Failed${BTS_JOB_DURATION_S_}"
     fi
-  fi
 
-  local STEPS_SUMMARY_S_=$(( ${BTS_NSTEPS_PASSED_} + ${BTS_NSTEPS_SKIPPED_} ))" steps:"
-  [ ${BTS_NSTEPS_SKIPPED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_SKIPPED_} done already"
-  [ ${BTS_NSTEPS_PASSED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_PASSED_} executed"
-  bts_I "${STEPS_SUMMARY_S_}"
+    local STEPS_SUMMARY_S_=$(( ${BTS_NSTEPS_PASSED_} + ${BTS_NSTEPS_SKIPPED_} ))" steps:"
+    [ ${BTS_NSTEPS_SKIPPED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_SKIPPED_} done already"
+    [ ${BTS_NSTEPS_PASSED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_PASSED_} executed"
+    bts_I "${STEPS_SUMMARY_S_}"
 
-	if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
-	then
-    rm -f "${BTS_ROOT}/.disabled"
-    bts_get_timestamp_ > "${BTS_ROOT}/.updated"
+    if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
+    then
+      rm -vf "${BTS_ROOT}/.disabled"
+      echo "${BTS_JOB_FINISH_TIME_} ${BTS_JOB_DURATION_}" > "${BTS_ROOT}/.updated"
+    fi
   fi
 
   return ${BTS_END_LAST_RC}
