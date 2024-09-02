@@ -409,10 +409,10 @@ bts_end()
 #      cd "${BTS_WORK_DIR}"
       bts_N "Done${BTS_JOB_DURATION_S_}"
     elif bts_step_is_in_progress_; then
-      bts_E "Step ${BTS_STEP_ID} ${BTS_SCOPE_NAME_} returned ${BTS_END_LAST_RC}${BTS_JOB_DURATION_S_}"
+      bts_E "Step ${BTS_STEP_ID:-} \"${BTS_SCOPE_NAME_:-}\" returned ${BTS_END_LAST_RC}${BTS_JOB_DURATION_S_}"
     else
       local MESSAGE_PREFIX_=""
-      [ -z "${BTS_STEP_ID:-}" ] || MESSAGE_PREFIX_=" (after step ${BTS_STEP_ID} \"${BTS_SCOPE_NAME_}\")"
+      [ -z "${BTS_STEP_ID:-}" ] || MESSAGE_PREFIX_=" (after step $((${BTS_STEP_ID}-1)) \"${BTS_SCOPE_NAME_}\")"
       bts_E "${BTS_RECIPE##*/}:${BASH_LINENO}${MESSAGE_PREFIX_} RC ${BTS_END_LAST_RC}"
       bts_E "Failed${BTS_JOB_DURATION_S_}"
     fi
@@ -592,7 +592,7 @@ bts_step()
 	  return 1
 	elif [ ${BTS_SCOPE_STATUS_} -eq 2 ]
 	then
-	  BTS_STEP_FINISH_TIME_=$(bts_get_timestamp_)
+	  local BTS_STEP_FINISH_TIME_=$(bts_get_timestamp_)
 	  BTS_STEP_DURATION_=$(bts_get_duration_ ${BTS_STEP_START_TIME_} ${BTS_STEP_FINISH_TIME_})
 		echo "${BTS_STEP_START_TIME_} ${BTS_STEP_DURATION_}" > "${BTS_SCOPE_FLAG_FILE_}"
 		# Global, to enable access from `bts_F` and in similar cases
