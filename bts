@@ -206,7 +206,10 @@ then
 fi
 #
 # Script is exec'uting with STDOUT and STDERR redirected to log.
-# One is OK to continue.
+#
+################################################################
+#
+# Real job starts here.
 #
 BTS_JOB_START_TIME_=$(bts_get_timestamp_)
 bts_D "BTS_JOB_START_TIME_ ${BTS_JOB_START_TIME_}"
@@ -222,6 +225,7 @@ bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
 #trap 'exec 2>&4 1>&3' 0 1 2 3
 #exec 1 2>&1 | tee "${BTS_APP_ID}"-$(date +%y%m%d-%H%M%S).log
 
+#
 # NB: OS-specific
 #
 BTS_ARCH=$(uname -m)
