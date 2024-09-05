@@ -329,7 +329,7 @@ bts_init()
   # where BTS_JOB_NAME taken from recipe file name
   # and BTS_JOB_VERSION taken from variable named "${BTS_JOB_NAME^^}_VERSION"
   local BTS_V_JOB_VERSION=$(sed -Ee 's,\W+,_,g; s,^_+,,' <<< "${BTS_JOB_NAME^^}_VERSION")
-  eval local BTS_JOB_VERSION='$'${BTS_V_JOB_VERSION}
+  eval local BTS_JOB_VERSION='${'${BTS_V_JOB_VERSION}':-}'
   local BTS_ROOT_DEFAULT_NAME="${BTS_JOB_NAME}${BTS_JOB_VERSION:+-${BTS_JOB_VERSION}}"
   #
   # User may set BTS_ROOT explicitly
