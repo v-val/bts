@@ -309,6 +309,15 @@ bts_required_version()
 }
 export -f bts_required_version
 
+#
+#
+#
+bts_compiler_get_version()
+{
+    [ $# -ne 0 ] || bts_F '`bts_compiler_get_version`: one positional argument required'
+    perl -pe 's,^\s*([a-z]+)\D+(\d+(\.\d+)*).*,$1 $2,i' <<< $("${1}" --version | head -1)
+}
+export -f bts_compiler_get_version
 
 # Sets BTS_ROOT and other common vars, creates directory structure
 bts_init()
