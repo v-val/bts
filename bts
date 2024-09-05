@@ -229,17 +229,18 @@ bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
 #
 # NB: OS-specific
 #
-BTS_ARCH=$(uname -m)
-BTS_ARCH_SUFFIX=
-[ "${BTS_ARCH}" = "x86_64" -o "${BTS_ARCH}" = "amd64" ] \
-  && BTS_ARCH_SUFFIX="64" \
-  || BTS_ARCH_SUFFIX=""
-export BTS_ARCH_SUFFIX
+export BTS_ARCH="$(uname -m)"
+export BTS_ARCH_SUFFIX=$([[ "${BTS_ARCH}" =~ 64$ ]] && echo "64" || : )
+#
+# Name of lib dir for libraries built
+export BTS_LIB_DIR_BASE_NAME=lib
+export BTS_LIB_DIR_NAME=${BTS_LIB_DIR_BASE_NAME}${BTS_ARCH_SUFFIX}
 
 #
-# N CPUs
-BTS_NCPUS=$(nproc)
-BTS_NJOBS_DEFAULT=$(( ${BTS_NCPUS} / 2 ))
+# Number of CPUs
+#
+BTS_NCPUS_=$(nproc)
+BTS_NJOBS_DEFAULT=$(( ${BTS_NCPUS_} / 2 ))
 export BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
 
 # Init routines for various platforms
