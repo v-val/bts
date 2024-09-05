@@ -1,5 +1,9 @@
 # Changes
 
+## 2024 September 2
+
+`bts` watches and reports counts of steps - #4 implemented.
+
 ## 2024 August 26
 
 * Step containers changed to `while ... ; do ... done`
