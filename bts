@@ -347,8 +347,6 @@ bts_init()
 	export BTS_SBIN_DIR="${BTS_ROOT}/sbin"
 	[ -d "${BTS_SBIN_DIR}" ] || mkdir -p "${BTS_SBIN_DIR}"
 	# Default dir for built libraries
-	export BTS_LIB_DIR_BASE_NAME="lib"
-	export BTS_LIB_DIR_NAME="${BTS_LIB_DIR_BASE_NAME}${BTS_ARCH_SUFFIX}"
 	export BTS_LIB_DIR="${BTS_ROOT}/${BTS_LIB_DIR_NAME}"
 	export BTS_GENERIC_LIB_DIR="${BTS_ROOT}/${BTS_LIB_DIR_BASE_NAME}"
 	[ -d "${BTS_LIB_DIR}" ] || mkdir -p "${BTS_LIB_DIR}"
