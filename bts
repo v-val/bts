@@ -498,10 +498,9 @@ bts_env()
 {
 	(
 #	  set -x
-    for p_ in "${BTS_PROFILE}" "${BTS_PRIVATE_PROFILE}"
-    do
+    for p_ in "${BTS_PROFILE}" "${BTS_PRIVATE_PROFILE}"; do
 	    [ ! -f "${p_}" ] || source "${p_}"
-	  done
+	    done
 #	  env | egrep '^\S' | egrep '^BTS|PATH|FLAGS' | sort
 	  command "$@"
   )
