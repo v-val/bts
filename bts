@@ -215,6 +215,7 @@ fi
 BTS_JOB_START_TIME_=$(bts_get_timestamp_)
 bts_D "BTS_JOB_START_TIME_ ${BTS_JOB_START_TIME_}"
 BTS_NSTEPS_PASSED_=0
+BTS_NSTEPS_FAILED_=0
 BTS_NSTEPS_SKIPPED_=0
 BTS_STEP_START_TIME_=
 bts_D "Start pid=$$"
@@ -322,6 +323,7 @@ bts_compiler_get_version()
     perl -pe 's,^\s*([a-z]+)\D+(\d+(\.\d+)*).*,$1 $2,i' <<< $("${1}" --version | head -1)
 }
 export -f bts_compiler_get_version
+
 
 # Sets BTS_ROOT and other common vars, creates directory structure
 bts_init()
@@ -434,10 +436,11 @@ bts_end()
       bts_E "Failed${BTS_JOB_DURATION_S_}"
     fi
 
-    local STEPS_SUMMARY_S_=$(( ${BTS_NSTEPS_PASSED_} + ${BTS_NSTEPS_SKIPPED_} ))" steps:"
-    [ ${BTS_NSTEPS_SKIPPED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_SKIPPED_} done already"
-    [ ${BTS_NSTEPS_PASSED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_PASSED_} executed"
-    bts_I "${STEPS_SUMMARY_S_}"
+        local STEPS_SUMMARY_S_=$(( ${BTS_NSTEPS_PASSED_} + ${BTS_NSTEPS_SKIPPED_} + ${BTS_NSTEPS_FAILED_} ))" steps:"
+        [ ${BTS_NSTEPS_SKIPPED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_SKIPPED_} done already"
+        [ ${BTS_NSTEPS_PASSED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_PASSED_} executed"
+        [ ${BTS_NSTEPS_FAILED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_FAILED_} failed"
+        bts_I "${STEPS_SUMMARY_S_}"
 
     if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
     then
@@ -777,12 +780,12 @@ bts_get()
       dir=$(sed -Ee 's,\.zip$,,i' <<< "${file}")
     else
 			bts_F "Unsupported archive ${file}"
-		fi
+    fi
     # Archived directory can be override
     [ "${ARCHIEVED_DIR}" ] \
       && dir="${ARCHIEVED_DIR}"
     # Fetch file
-		[ -f "${file}" ] || curl -#nL -o "${file}" "${url}"
+    [ -f "${file}" ] || curl -#nL -o "${file}" "${url}"
     # Extract file
     if [ "${BTS_GET_DIR:-}" ]
     then
