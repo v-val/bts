@@ -276,6 +276,10 @@ linux*)
 	bts_F "Unsupported OS ${OSTYPE}"
 	;;
 esac
+#
+#
+#
+export BTS_STEP_ID=0
 
 #
 # Shortcut functions checking OS family and generation
@@ -590,7 +594,7 @@ bts_step()
 	eval local BTS_SCOPE_STATUS_="\${${BTS_SCOPE_V_C_}}"
 
 	# Step number
-	BTS_STEP_ID=${BTS_STEP_ID:-1}
+	[ ${BTS_SCOPE_STATUS_} -eq 1 ] && export BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 )) || :
 
 	bts_T "${BTS_SCOPE_NAME_} (#${BTS_STEP_ID}): status ${BTS_SCOPE_STATUS_}, ${BTS_SCOPE_FLAG_FILE_##*/} "$([ -e "${BTS_SCOPE_FLAG_FILE_}" ] && echo "EXISTS" || echo "MISSING")
 
@@ -599,7 +603,6 @@ bts_step()
 	then
 	  bts_I "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
 	  bts_I "Skip [already done]"
-	  BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
 	  BTS_STEP_START_TIME_=
 	  BTS_NSTEPS_SKIPPED_=$(( ${BTS_NSTEPS_SKIPPED_} + 1 ))
 	  return 1
@@ -620,7 +623,6 @@ bts_step()
 
   # Actual step starts here
   # so does initialization of step-related variables
-  BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
   BTS_STEP_START_TIME_=$(bts_get_timestamp_)
 	bts_N "${BTS_STEP_ID} ${BTS_SCOPE_NAME_}"
 
