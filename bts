@@ -440,6 +440,7 @@ bts_end()
       rm -vf "${BTS_ROOT}/.disabled"
       echo "${BTS_JOB_FINISH_TIME_} ${BTS_JOB_DURATION_}" > "${BTS_ROOT}/.updated"
     fi
+
   fi
 
   return ${BTS_END_LAST_RC}
@@ -497,12 +498,12 @@ export -f bts_pkg
 bts_env()
 {
 	(
-#	  set -x
-    for p_ in "${BTS_PROFILE}" "${BTS_PRIVATE_PROFILE}"; do
-	    [ ! -f "${p_}" ] || source "${p_}"
-	    done
+	    [ "${BTS_ENV_PUBLIC:-}" -o ! -f "${BTS_PRIVATE_PROFILE}" ] || source "${BTS_PRIVATE_PROFILE}"
+	    [ ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}"
 #	  env | egrep '^\S' | egrep '^BTS|PATH|FLAGS' | sort
-	  command "$@"
+#	  set -x
+#        bts_T "Command: $@"
+	    command "$@"
   )
   local rc_=$?
   : || bts_D "Command:
