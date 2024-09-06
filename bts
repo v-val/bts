@@ -456,8 +456,6 @@ Failed${BTS_JOB_DURATION_S_}
         [ ${BTS_NSTEPS_FAILED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_FAILED_} failed"
         bts_I "${STEPS_SUMMARY_S_}"
 
-        fi
-
         if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
         then
           rm -vf "${BTS_ROOT}/.disabled"
