@@ -452,6 +452,20 @@ Failed${BTS_JOB_DURATION_S_}
         [ ${BTS_NSTEPS_PASSED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_PASSED_} executed"
         [ ${BTS_NSTEPS_FAILED_} -eq 0 ] || STEPS_SUMMARY_S_+=" ${BTS_NSTEPS_FAILED_} failed"
         bts_I "${STEPS_SUMMARY_S_}"
+        ALERT_MESSAGE_+="
+${STEPS_SUMMARY_S_}"
+
+        #
+        # Send telegram alert
+        #
+        local ALERT_CONF_FILE_=~/.config/tva
+        if [ -z "${BTS_DISABLE_ALERT:-}" -a -r "${ALERT_CONF_FILE_}" ] && read dest_ token_ < "${ALERT_CONF_FILE_}" ; then
+            ALERT_MESSAGE_=$(perl -pe 's,\n,%0A,g' <<< "${ALERT_MESSAGE_}")
+            bts_T "Alert text: '''${ALERT_MESSAGE_}'''"
+            (cat<<EOF | curl -sL -XPOST -d chat_id="${dest_}" -d@- "https://api.telegram.org/bot${token_}/sendMessage" > /dev/null 2>&1) &
+text=${BTS_RECIPE##*/}: ${ALERT_MESSAGE_}
+EOF
+        fi
 
         if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
         then
