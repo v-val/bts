@@ -533,7 +533,7 @@ bts_env()
 {
 	(
 	    [ "${BTS_ENV_PUBLIC:-}" -o ! -f "${BTS_PRIVATE_PROFILE}" ] || source "${BTS_PRIVATE_PROFILE}"
-	    [ ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}"
+	    [ "${BTS_ENV_NOPUBLIC:-}" -o ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}"
 #	  env | egrep '^\S' | egrep '^BTS|PATH|FLAGS' | sort
 #	  set -x
 #        bts_T "Command: $@"
