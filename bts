@@ -357,6 +357,8 @@ bts_init()
 	export BTS_LIB_DIR="${BTS_ROOT}/${BTS_LIB_DIR_NAME}"
 	export BTS_GENERIC_LIB_DIR="${BTS_ROOT}/${BTS_LIB_DIR_BASE_NAME}"
 	[ -d "${BTS_LIB_DIR}" ] || mkdir -p "${BTS_LIB_DIR}"
+	[ "${BTS_GENERIC_LIB_DIR}" = "${BTS_LIB_DIR}" -o -e "${BTS_GENERIC_LIB_DIR}" ] || \
+	        ( cd "${BTS_ROOT}" && ln -svf "${BTS_LIB_DIR_NAME}" "${BTS_LIB_DIR_BASE_NAME}" )
 
 	# Default dir for headers
 	export BTS_INCLUDE_DIR="${BTS_ROOT}/include"
