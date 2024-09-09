@@ -603,7 +603,11 @@ export -f bts_step_make_id_
 
 bts_step_make_flag_file_name_() {
     [ $# -gt 0 ] || bts_F "\`bts_step_make_flag_file_name_\`: mandatory argument(s) missing"
-    echo "${BTS_WORK_DIR}/.${BTS_APP_ID}."$(bts_step_make_id_ "$@")
+    local r_=
+    for name_ in "$@"; do
+        r_+=${r_:+" "}"${BTS_WORK_DIR}/.${BTS_APP_ID}."$(bts_step_make_id_ "${name_}")
+        done
+    echo "${r_}"
 }
 export -f bts_step_make_flag_file_name_
 
