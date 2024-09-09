@@ -83,7 +83,8 @@ bts_F() {
     else
       MESSAGE_PREFIX_+="after "
     fi
-    MESSAGE_PREFIX_+="step ${BTS_STEP_ID} \"${BTS_SCOPE_NAME_}\""
+    MESSAGE_PREFIX_+="step ${BTS_STEP_ID}"
+    [ "${BTS_SCOPE_NAME_:-}" ] && MESSAGE_PREFIX_+=" \"${BTS_SCOPE_NAME_}\""
   fi
   [ ${LAST_RC} -eq 0 ] || MESSAGE_PREFIX_+=" rc ${LAST_RC}"
   [ "${MESSAGE_PREFIX_}" ] && MESSAGE_PREFIX_="
@@ -419,7 +420,7 @@ bts_end()
 #  Step ${BTS_STEP_ID:-}
 #  CC ${BTS_END_CALL_COUNT}
 #  "
-    if [ -f "${BTS_FLAG_FILE_DISABLED}" ]
+    if [ "${BTS_FLAG_FILE_DISABLED:-}" -a -f "${BTS_FLAG_FILE_DISABLED:-}" ]
     then
         BTS_JOB_FINISH_TIME_=$(bts_get_timestamp_)
         BTS_JOB_DURATION_=$(bts_get_duration_ ${BTS_JOB_START_TIME_} ${BTS_JOB_FINISH_TIME_})
@@ -469,7 +470,7 @@ EOF
 
         if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
         then
-          rm -vf "${BTS_ROOT}/.disabled"
+          rm -vf "${BTS_FLAG_FILE_DISABLED}"
           echo "${BTS_JOB_FINISH_TIME_} ${BTS_JOB_DURATION_}" > "${BTS_ROOT}/.updated"
         fi
   fi
