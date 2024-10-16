@@ -243,6 +243,7 @@ export BTS_LIB_DIR_NAME=${BTS_LIB_DIR_BASE_NAME}${BTS_ARCH_SUFFIX}
 #
 BTS_NCPUS_=$(nproc)
 BTS_NJOBS_DEFAULT=$(( ${BTS_NCPUS_} / 2 ))
+#[ ${BTS_NJOBS_DEFAULT} -gt 6 ] && BTS_NJOBS_DEFAULT=6 || :
 export BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
 
 # Init routines for various platforms
