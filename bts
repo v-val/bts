@@ -750,6 +750,7 @@ bts_unzip()
 export -f bts_unzip
 
 
+# Downloads and extracts sources
 bts_get()
 {
 	local url="$1"
