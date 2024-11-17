@@ -149,7 +149,11 @@ then
     bts_F "\`exec\` returned ${BTS_RC}"
 fi
 #
-# One is OK to continue
+# Script is exec'uting with STDOUT and STDERR redirected to log.
+#
+################################################################
+#
+# Real job starts here.
 #
 bts_D "Start pid=$$"
 bts_I "Job name ${BTS_JOB_NAME}"
@@ -160,6 +164,7 @@ bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
 #trap 'exec 2>&4 1>&3' 0 1 2 3
 #exec 1 2>&1 | tee "${BTS_APP_ID}"-$(date +%y%m%d-%H%M%S).log
 
+#
 # NB: OS-specific
 #
 BTS_ARCH=$(uname -m)
@@ -170,7 +175,8 @@ BTS_ARCH_SUFFIX=
 export BTS_ARCH_SUFFIX
 
 #
-# N CPUs
+# Number of CPUs
+#
 BTS_NCPUS=$(nproc)
 BTS_NJOBS_DEFAULT=$(( ${BTS_NCPUS} / 2 ))
 export BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
@@ -191,15 +197,15 @@ case ${OSTYPE} in
 [Ll][Ii][Nn][Uu][Xx]*)
 	if [ -f "/etc/redhat-release" ]
 	then
-	  Platform="rh"
+	    Platform="rh"
 		Platform_EL=EL$(cat /etc/redhat-release | perl -pe 's,.*?(\d).*,$1,')
     bts_D "Detected platform ${Platform} ${Platform_EL}"
 	else
-		bts_F "Unsupported ${OSTYPE} family"
+		bts_F "Unsupported OS family ${OSTYPE}"
 	fi
 	;;
 *)
-	bts_F "Unsupported platform ${OSTYPE}"
+	bts_F "Unsupported OS ${OSTYPE}"
 	;;
 esac
 
