@@ -477,10 +477,12 @@ export -f bts_step
 bts_build_dir()
 {
 	BTS_CURRENT_SOURCE_DIR="${PWD}"
-	BTS_CURRENT_BUILD_DIR="${BTS_WORK_DIR}/${BTS_CURRENT_SOURCE_DIR##*/}.build"
+	# TODO: enable configuration of common prefix to all build dirs.
+	BTS_CURRENT_BUILD_DIR=${BTS_CURRENT_SOURCE_DIR}.build
 	[ -d "${BTS_CURRENT_BUILD_DIR}" ] || mkdir -p "${BTS_CURRENT_BUILD_DIR}"
 	cd "${BTS_CURRENT_BUILD_DIR}"
-	bts_D "Changed to ${PWD}"
+	[ "${BTS_NO_CLEAN:-}" ] || BTS_CLEAN_LIST=${BTS_CLEAN_LIST:+"${BTS_CLEAN_LIST} "}"${PWD}"
+	bts_D "In ${PWD}"
 }
 export -f bts_build_dir
 
@@ -545,6 +547,22 @@ bts_get()
 	# bts_extract_dir
 	local BTS_EXTRACT_DIR=${BTS_EXTRACT_DIR:-}
 	local BTS_NOCD=${BTS_NOCD:-}
+
+	# Often name of downloaded file can be derived from URL.
+	# Unfortunately this is not always the case.
+	# To be positive about the name of downloaded file
+	# one fetch files to dir with "unique" name.
+	local BTS_GET_DIR_=${BTS_GET_DIR:-${BTS_WORK_DIR}}
+#	local BTS_GET_LIST_="${BTS_GET_DIR_}/.bts-get.list"
+#	local BTS_GET_SOURCE_DIGEST=$(openssl dgst -sha224 <<< "${url}" | cut -f2 -d' ')
+#	egrep -iqs "^${BTS_GET_SOURCE_DIGEST}\\b" "${BTS_GET_LIST_}" \
+#	        || echo "${BTS_GET_SOURCE_DIGEST} ${url}" >> "${BTS_GET_LIST_}"
+	local BTS_GET_CURRENT_DOWNLOAD_DIR=${BTS_GET_DIR_}/.${BTS_APP_ID}${BTS_STEP_TAG:+.${BTS_STEP_TAG}}${file:+.${file}}
+	[ -d "${BTS_GET_CURRENT_DOWNLOAD_DIR}" ] || mkdir -p "${BTS_GET_CURRENT_DOWNLOAD_DIR}"
+	pushd . >/dev/null 2>&1
+	cd "${BTS_GET_CURRENT_DOWNLOAD_DIR}"
+	bts_T "bts_get in '${PWD}'"
+	[ "${BTS_NO_CLEAN:-}" ] || BTS_CLEAN_LIST=${BTS_CLEAN_LIST:+"${BTS_CLEAN_LIST} "}"${PWD}"
 
     # TODO: rework
 	if [ "${SCHEME}" = "git" ] || egrep -iqs '\.(git)$' <<< "${file}"
