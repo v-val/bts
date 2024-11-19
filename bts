@@ -267,14 +267,29 @@ EOF
 export -f bts_init
 
 
+#
+# Remove [blank-separated] paths from BTS_CLEAN_LIST
+#
+bts_clean()
+{
+    if [ "${BTS_CLEAN_LIST:-}" ]
+    then
+        bts_T "Clean ${BTS_CLEAN_LIST}"
+        rm -rf ${BTS_CLEAN_LIST:-}
+        BTS_CLEAN_LIST=
+    fi
+}
+export -f bts_clean
+
+
 bts_end()
 {
-  local LAST_RC_=$?
-  bts_D "
-  LAST_RC_    ${LAST_RC_}
-  BTS_STEP_ID ${BTS_STEP_ID:-}
-  BUILD_STEP_FILE ${BUILD_STEP_FILE:-}
-  "
+    local LAST_RC_=$?
+    bts_D "
+    LAST_RC_    ${LAST_RC_}
+    BTS_STEP_ID ${BTS_STEP_ID:-}
+    BUILD_STEP_FILE ${BUILD_STEP_FILE:-}
+    "
 	if [ ${LAST_RC_} -eq 0 \
 	  -a "${BTS_STEP_ID:-}" -a ${BTS_STEP_ID:--1} -gt 0 \
 	  -a "${BUILD_STEP_FILE:-}" -a ! -f "${BUILD_STEP_FILE:-}" \
@@ -282,9 +297,10 @@ bts_end()
 	then
 		cd "${BTS_WORK_DIR}"
 		touch "${BUILD_STEP_FILE}"
-    bts_N "Done"
-  else
-    bts_E "Step '${BTS_STEP_ID:--}' returned ${LAST_RC_}"
+		bts_clean
+        bts_N "Done"
+    else
+        bts_E "Step '${BTS_STEP_ID:--}' returned ${LAST_RC_}"
 	fi
 	if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
 	then
@@ -412,9 +428,13 @@ bts_step()
 	cd "${BTS_WORK_DIR}"
 #	echo "  * Changed to ${PWD}"
 
+    #
+    # Set previous step as done
+    #
 	if [ "${BTS_STEP_ID}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
 	then
 		touch "${BUILD_STEP_FILE}"
+		bts_clean
 		bts_I "Done"
 	fi
 
