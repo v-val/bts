@@ -317,31 +317,31 @@ bts_pkg()
 {
 	case "${Platform}" in
 	rh)
-	  if [ "${Platform_EL}" = "EL8" ]
-	  then
-		  ${BTS_SUDO} dnf -y "$@"
-		elif [ "${Platform_EL}" = "EL7" ]
-		then
-		  ${BTS_SUDO} yum -y "$@"
-		else
-		  bts_F "Unsupported platform '${Platform}' version '${Platform_EL}'"
-		fi
-		;;
-  cygwin)
-    if ! command -v apt-cyg >/dev/null 2>&1
-    then
-      bts_N "apt-cyg missing"
-      curl -nOL https://raw.githubusercontent.com/transcode-open/apt-cyg/master/apt-cyg
-      if [ ! -d ~/exec ]
-      then
-        mkdir ~/exec
-        export PATH=~/exec:${PATH}
-      fi
-      install apt-cyg ~/exec
-      bts_N "apt-cyg installed as $(command -v apt-cyg)"
-    fi
-    apt-cyg "$@"
-    ;;
+        if [ "${Platform_EL}" = "EL8" ]
+        then
+            ${BTS_SUDO:-} dnf -y "$@"
+        elif [ "${Platform_EL}" = "EL7" ]
+        then
+            ${BTS_SUDO:-} yum -y "$@"
+        else
+            bts_F "Unsupported platform '${Platform}' version '${Platform_EL}'"
+        fi
+        ;;
+    cygwin)
+        if ! command -v apt-cyg >/dev/null 2>&1
+        then
+            bts_N "apt-cyg missing"
+            curl -nOL https://raw.githubusercontent.com/transcode-open/apt-cyg/master/apt-cyg
+            if [ ! -d ~/exec ]
+            then
+                mkdir ~/exec
+                export PATH=~/exec:${PATH}
+            fi
+            install apt-cyg ~/exec
+            bts_N "apt-cyg installed as $(command -v apt-cyg)"
+        fi
+        apt-cyg "$@"
+        ;;
 	msys)
 		local a="$1"
 		shift
