@@ -450,7 +450,7 @@ bts_step()
 	            ' \
 	            <<< "${BUILD_STEP_DESC_}"
 	        )
-	bts_T "bts_step tag ${BTS_STEP_TAG}"
+	bts_T "step tag ${BTS_STEP_TAG}"
 	BUILD_STEP_FILE=".${BTS_APP_ID}.${BTS_STEP_TAG}"
 
 	bts_N "${BTS_STEP_ID} ${BUILD_STEP_DESC_}"
@@ -531,7 +531,7 @@ bts_get()
 {
 	local url="$1"
 	shift
-	bts_T "bts_get ${url}"
+	bts_T "get ${url}"
 	# Many URL end with source code archive file
 	# In other cases "file" would be repository name
 	local file="${url}"
@@ -541,7 +541,7 @@ bts_get()
 	file=${file##*/}
 	# Drop query string
 	file=$(perl -pe 's,[?&].*$,,' <<< "${file}")
-	bts_T "bts_get assume result '${file}'"
+	bts_T "get assume result '${file}'"
 	# For CVS repo passed as separate arg
 	local dir
 	# bts_extract_dir
@@ -561,7 +561,7 @@ bts_get()
 	[ -d "${BTS_GET_CURRENT_DOWNLOAD_DIR}" ] || mkdir -p "${BTS_GET_CURRENT_DOWNLOAD_DIR}"
 	pushd . >/dev/null 2>&1
 	cd "${BTS_GET_CURRENT_DOWNLOAD_DIR}"
-	bts_T "bts_get in '${PWD}'"
+	bts_T "get in '${PWD}'"
 	[ "${BTS_NO_CLEAN:-}" ] || BTS_CLEAN_LIST=${BTS_CLEAN_LIST:+"${BTS_CLEAN_LIST} "}"${PWD}"
 
     # TODO: rework
@@ -631,7 +631,7 @@ bts_get()
             extract_fn_="bts_unzip"
             dir=$(sed -Ee 's,\.zip$,,i' <<< "${file}")
         else
-			bts_T "'${file}' doesn't look as archive, fetch without extracting"
+			bts_T "get '${file}' doesn't look as archive, fetch without extracting"
 		fi
         # Archived directory can be overridden
         [ "${ARCHIEVED_DIR:-}" ] && dir="${ARCHIEVED_DIR}" || :
@@ -652,7 +652,7 @@ bts_get()
         #
         if [ "${BTS_NOCD:-}" ]
         then
-            bts_T "Not changing to extracted directory: BTS_NOCD=${BTS_NOCD}"
+            bts_T "get not changing to extracted directory: BTS_NOCD=${BTS_NOCD}"
         elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
         then
             cd "${BTS_EXTRACT_DIR}"
@@ -662,7 +662,7 @@ bts_get()
             cd "${dir}"
 	        bts_D "Changed to ${PWD}"
 	    else
-	        bts_T "Can't assume dir to chang to, stay in ${PWD}"
+	        bts_T "get can't assume dir to change to, stay in ${PWD}"
         fi
 	fi
 }
