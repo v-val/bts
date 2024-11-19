@@ -477,8 +477,13 @@ export -f bts_step
 bts_build_dir()
 {
 	BTS_CURRENT_SOURCE_DIR="${PWD}"
-	# TODO: enable configuration of common prefix to all build dirs.
-	BTS_CURRENT_BUILD_DIR=${BTS_CURRENT_SOURCE_DIR}.build
+	if [ "${BTS_BUILD_DIR:-}" ]
+	then
+	    BTS_CURRENT_BUILD_DIR=${BTS_BUILD_DIR}/.${BTS_APP_ID}${BTS_STEP_TAG:+.${BTS_STEP_TAG}}.${PWD##*/}.build
+	else
+	    BTS_CURRENT_BUILD_DIR=${BTS_CURRENT_SOURCE_DIR}.build
+	fi
+	bts_T "build_dir ${BTS_CURRENT_BUILD_DIR}"
 	[ -d "${BTS_CURRENT_BUILD_DIR}" ] || mkdir -p "${BTS_CURRENT_BUILD_DIR}"
 	cd "${BTS_CURRENT_BUILD_DIR}"
 	[ "${BTS_NO_CLEAN:-}" ] || BTS_CLEAN_LIST=${BTS_CLEAN_LIST:+"${BTS_CLEAN_LIST} "}"${PWD}"
