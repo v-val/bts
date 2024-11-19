@@ -25,3 +25,9 @@ Extension to other Linux would be simple, just update around "___# NB: OS-specif
 
 Documentation is in progress.  
 For the moment please contact me if need help in using BTS or just submit a ticket.
+
+## Requirements
+* cut
+* egrep, grep
+* perl
+
