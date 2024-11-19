@@ -625,7 +625,8 @@ bts_get()
             [ -d "${BTS_GET_DIR}" ] || mkdir -p "${BTS_GET_DIR}"
             cd "${BTS_GET_DIR}"
             ${extract_fn_} "${BTS_WORK_DIR}/${file}"
-        else
+        elif [ "${extract_fn_:-}" ]
+        then
             ${extract_fn_} "${file}"
         fi
         #
@@ -638,7 +639,7 @@ bts_get()
         then
             cd "${BTS_EXTRACT_DIR}"
 	        bts_D "Changed to extracted directory ${PWD}"
-        elif [ -d "${dir}" ]
+        elif [ "${dir:-}" -a -d "${dir:-}" ]
         then
             cd "${dir}"
 	        bts_D "Changed to ${PWD}"
