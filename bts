@@ -233,9 +233,9 @@ bts_init()
 	[ -e "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
 	(pushd . >/dev/null 2>&1; cd "${BTS_WORK_DIR}" ; popd >/dev/null 2>&1)
 	# Conf dir, now storing only profile
-	export BTS_CONF_DIR="${BTS_WORK_DIR}/etc"
-	[ -d "${BTS_CONF_DIR}" ] || mkdir -p "${BTS_CONF_DIR}"
-  # Environment vars used by builds
+#	export BTS_CONF_DIR="${BTS_WORK_DIR}/etc"
+#	[ -d "${BTS_CONF_DIR}" ] || mkdir -p "${BTS_CONF_DIR}"
+    # Environment vars used by builds
 	export BTS_PROFILE=${BTS_PROFILE:-"${BTS_ROOT}/enable"}
 	[ "${Platform}" = "rh" -a $(id -u) -ne 0 ] && BTS_SUDO="sudo "
 	# Directory with extras (e.g. patches)
