@@ -458,10 +458,17 @@ export -f bts_build_dir
 
 bts_untar()
 {
-  local FILE_="$1"
-  local ARGS_="x"
-  [[ "${FILE_}" =~ 'xz$' ]] && ARGS_+="J"
-  bts_env tar ${ARGS_}f "$@"
+    local FILE_
+    [ "$1" = "-" ] && FILE_=${BTS_UNTAR_FILE:-} || FILE_="$1"
+    local ARGS_="x"
+    if egrep -iqs 'xz$' <<< "${FILE_}" ; then
+        ARGS_+="J"
+    elif egrep -iqs 'gz$' <<< "${FILE_}" ; then
+        ARGS_+="z"
+    elif egrep -iqs 'bz2?$' <<< "${FILE_}" ; then
+        ARGS_+="j"
+    fi
+    bts_env tar ${ARGS_}f "$@"
 }
 export -f bts_untar
 
@@ -473,11 +480,27 @@ bts_unzip()
 export -f bts_unzip
 
 
+bts_fetch()
+{
+    local destination="$1"
+    shift
+    local source="$1"
+    shift
+    if [ "${BTS_GET_HELPER:-}" ]
+    then
+        bts_env curl -#knL -o "${destination}" -H"BTS-Get-URL: ${source}" "${BTS_GET_HELPER:-}"
+    else
+        bts_env curl -#knL -o "${destination}" "${source}"
+    fi
+}
+export -f bts_fetch
+
+
 bts_get()
 {
 	local url="$1"
 	shift
-	bts_D "bts_get URL = ${url}"
+	bts_T "bts_get ${url}"
 	# Many URL end with source code archive file
 	# In other cases "file" would be repository name
 	local file="${url}"
@@ -485,27 +508,32 @@ bts_get()
 	file=${file%/download}
 	# Leave only trailing component
 	file=${file##*/}
+	# Drop query string
+	file=$(perl -pe 's,[?&].*$,,' <<< "${file}")
+	bts_T "bts_get assume result '${file}'"
 	# For CVS repo passed as separate arg
 	local dir
 	# bts_extract_dir
 	local BTS_EXTRACT_DIR=${BTS_EXTRACT_DIR:-}
 	local BTS_NOCD=${BTS_NOCD:-}
 
-  # TODO: rework
+    # TODO: rework
 	if [ "${SCHEME}" = "git" ] || egrep -iqs '\.(git)$' <<< "${file}"
 	then
 		dir=$(sed -e 's,\.git$,,i' <<< "${file}")
-		local opt_ref_=""
-		if [ "${TAG}" ]
+		local opt_ref_=
+		if [ "${TAG:-}" ]
 		then
-		  dir="${dir}-${TAG}"
-		  opt_ref_="-b${TAG}"
+            dir="${dir}-${TAG}"
+            opt_ref_="-b${TAG}"
 		fi
 		[ -d "${dir}" ] || git clone --depth 1 ${opt_ref_} --recurse-submodules "$@" "${url}" "${dir}"
 		cd "${dir}"
-#		[ "${TAG}" ] && git checkout tags/"${TAG}"
 	elif [ "${SCHEME}" = "svn" ] || egrep -iqs '^svn://' <<< "${url}"
 	then
+	    #
+	    # Not really supporting SVN
+	    #
 		local SCHEME="svn"
 		[ "${LOCAL_REPO}" ] || bts_F "Schema ${SCHEME} requires LOCAL_REPO to be set"
 		dir="${LOCAL_REPO}"
@@ -513,9 +541,12 @@ bts_get()
 		cd "${dir}"
 	elif [ "${SCHEME}" = "cvs" ] || egrep -iqs '^cvs:/*' <<< "${url}"
 	then
+	    #
+	    # Not really supporting CVS
+	    #
 		local SCHEME="cvs"
 		local repo="${1:-}"
-    shift
+        shift
 		local url_=$(sed -e 's,^cvs:/*,,i' <<< "${url}")
 		# Todo: checkout to dir passed with LOCAL_REPO if specified
 		[ "${repo}" ] || bts_F "Schema ${SCHEME} requires repository name passed as last arg"
@@ -526,56 +557,66 @@ bts_get()
 		[ -d "${dir}" ] || ${cmd}
 		cd "${dir}"
 	elif [ "${SCHEME}" = "rsync" ] ### Invent scheme for rsync ?? || echo "${url}" | egrep -iqs '^cvs:/*'
-  then
-    local SCHEME="rsync"
-    local url_="${url}"
-    dir="${url_##*/}"
-    local cmd="rsync -az ${url_}"
-    cmd="${cmd} ${repo:-.}"
-    [ -z "${BTS_GET_FORCE:-}" -a -d "${dir}" ] || ${cmd}
-    cd "${dir}"
+    then
+        #
+        # Not really supporting RSYNC
+        #
+        local url_="${url}"
+        dir="${url_##*/}"
+        local cmd="rsync -az ${url_}"
+        cmd="${cmd} ${repo:-.}"
+        [ -z "${BTS_GET_FORCE:-}" -a -d "${dir}" ] || ${cmd}
+        cd "${dir}"
 	else
-	  local archive_type_
-	  local extract_fn_
-	  if egrep -iqs '\.(tar|t(ar\.)?(gz|bz2?|xz))$' <<< "${file}"
-    then
-      archive_type_="tar"
-      extract_fn_="bts_untar"
-      dir=$(echo "${file}" | perl -pe 's,\.(tar|t(ar\.)?(gz|bz2?|xz))$,,i')
-    elif egrep -iqs '\.zip$' <<< "${file}"
-    then
-      archive_type_="zip"
-      extract_fn_="bts_unzip"
-      dir=$(sed -Ee 's,\.zip$,,i' <<< "${file}")
-    else
-			bts_F "Unsupported archive ${file}"
+	    #
+	    # Fetch with CURL and extract
+	    #
+        local archive_type_
+        local extract_fn_
+        if egrep -iqs '\.(tar|t(ar\.)?(gz|bz2?|xz))$' <<< "${file}"
+        then
+            archive_type_="tar"
+            extract_fn_="bts_untar"
+            dir=$(echo "${file}" | perl -pe 's,\.(tar|t(ar\.)?(gz|bz2?|xz))$,,i')
+        elif egrep -iqs '\.zip$' <<< "${file}"
+        then
+            archive_type_="zip"
+            extract_fn_="bts_unzip"
+            dir=$(sed -Ee 's,\.zip$,,i' <<< "${file}")
+        else
+			bts_T "'${file}' doesn't look as archive, fetch without extracting"
 		fi
-    # Archived directory can be override
-    [ "${ARCHIEVED_DIR}" ] \
-      && dir="${ARCHIEVED_DIR}"
-    # Fetch file
-		[ -f "${file}" ] || curl -#knL -o "${file}" "${url}"
-    # Extract file
-    if [ "${BTS_GET_DIR:-}" ]
-    then
-      [ -d "${BTS_GET_DIR}" ] || mkdir -p "${BTS_GET_DIR}"
-      cd "${BTS_GET_DIR}"
-      ${extract_fn_} "${BTS_WORK_DIR}/${file}"
-    else
-      ${extract_fn_} "${file}"
-    fi
-    if [ "${BTS_NOCD:-}" ]
-    then
-      true
-    elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
-    then
-      cd "${BTS_EXTRACT_DIR}"
-    elif [ -d "${dir}" ]
-    then
-      cd "${dir}"
-    fi
+        # Archived directory can be overridden
+        [ "${ARCHIEVED_DIR:-}" ] && dir="${ARCHIEVED_DIR}" || :
+        # Fetch file
+		[ -f "${file}" ] || bts_fetch "${file}" "${url}"
+        # Extract file
+        if [ "${BTS_GET_DIR:-}" ]
+        then
+            [ -d "${BTS_GET_DIR}" ] || mkdir -p "${BTS_GET_DIR}"
+            cd "${BTS_GET_DIR}"
+            ${extract_fn_} "${BTS_WORK_DIR}/${file}"
+        else
+            ${extract_fn_} "${file}"
+        fi
+        #
+        # Downloaded and extracted
+        #
+        if [ "${BTS_NOCD:-}" ]
+        then
+            bts_T "Not changing to extracted directory: BTS_NOCD=${BTS_NOCD}"
+        elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
+        then
+            cd "${BTS_EXTRACT_DIR}"
+	        bts_D "Changed to extracted directory ${PWD}"
+        elif [ -d "${dir}" ]
+        then
+            cd "${dir}"
+	        bts_D "Changed to ${PWD}"
+	    else
+	        bts_T "Can't assume dir to chang to, stay in ${PWD}"
+        fi
 	fi
-	bts_D "Changed to ${PWD}"
 }
 export -f bts_get
 
