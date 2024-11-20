@@ -57,14 +57,14 @@ bts_F() {
 }
 export -f bts_F
 
-bts_T "Trace data"
-bts_D "Debug info"
-bts_V "Verbose note"
-bts_I "Info message"
-bts_N "Notice fyi"
-bts_W "Warning to check"
-bts_E "Error to fix"
-bts_F "Fatal failure"
+#bts_T "Trace data"
+#bts_D "Debug info"
+#bts_V "Verbose note"
+#bts_I "Info message"
+#bts_N "Notice fyi"
+#bts_W "Warning to check"
+#bts_E "Error to fix"
+#bts_F "Fatal failure"
 
 #
 # Recipe file name can be passed as follows: 
