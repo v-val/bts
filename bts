@@ -290,24 +290,24 @@ bts_end()
     BTS_STEP_ID ${BTS_STEP_ID:-}
     BUILD_STEP_FILE ${BUILD_STEP_FILE:-}
     "
-	if [ ${LAST_RC_} -eq 0 \
-	  -a "${BTS_STEP_ID:-}" -a ${BTS_STEP_ID:--1} -gt 0 \
-	  -a "${BUILD_STEP_FILE:-}" -a ! -f "${BUILD_STEP_FILE:-}" \
-	  ]
-	then
-		cd "${BTS_WORK_DIR}"
-		touch "${BUILD_STEP_FILE}"
-		bts_clean
+    if [ ${LAST_RC_} -eq 0 \
+            -a "${BTS_STEP_ID:-}" -a ${BTS_STEP_ID:--1} -gt 0 \
+            -a "${BUILD_STEP_FILE:-}" -a ! -f "${BUILD_STEP_FILE:-}" \
+        ]
+    then
+        cd "${BTS_WORK_DIR}"
+        touch "${BUILD_STEP_FILE}"
+        bts_clean
         bts_N "Done"
     else
         bts_E "Step '${BTS_STEP_ID:--}' returned ${LAST_RC_}"
-	fi
-	if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
-	then
-    rm -f "${BTS_ROOT}/.disabled"
-    date +%s > "${BTS_ROOT}/.updated"
-  fi
-  return ${LAST_RC_}
+    fi
+    if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
+    then
+        rm -f "${BTS_ROOT}/.disabled"
+        date +%s > "${BTS_ROOT}/.updated"
+    fi
+    return ${LAST_RC_}
 }
 trap bts_end EXIT ERR
 

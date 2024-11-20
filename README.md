@@ -30,4 +30,5 @@ For the moment please contact me if need help in using BTS or just submit a tick
 * cut
 * egrep, grep
 * perl
+* tee
 
