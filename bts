@@ -298,6 +298,7 @@ bts_end()
         cd "${BTS_WORK_DIR}"
         touch "${BUILD_STEP_FILE}"
         bts_clean
+        bts_dump_updated_files
         bts_N "Done"
     else
         bts_E "Step '${BTS_STEP_ID:--}' returned ${LAST_RC_}"
@@ -425,6 +426,23 @@ bts_cmake_build_install()
 export -f bts_cmake_build_install
 
 
+bts_dump_updated_files()
+{
+    (
+        echo "# ${BTS_STEP_TAG}"
+        [ -z "${BTS_STEP_EXTRA_FILES:-}" ] || cat<<EOF
+${BTS_STEP_EXTRA_FILES}
+EOF
+        find "${BTS_ROOT}" -cnewer "${BTS_STEP_STARTED_FILE}" -not -type d \
+                | sed -Ee "s,^${BTS_ROOT}/*,," | sort
+    ) \
+            | bzip2 -9  > "${BUILD_STEP_FILE}"
+    BTS_STEP_EXTRA_FILES=
+    rm -f "${BTS_STEP_STARTED_FILE}"
+}
+export -f bts_dump_updated_files
+
+
 bts_step()
 {
 	[ -d "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
@@ -436,8 +454,8 @@ bts_step()
     #
 	if [ "${BTS_STEP_ID}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
 	then
-		touch "${BUILD_STEP_FILE}"
 		bts_clean
+		bts_dump_updated_files
 		bts_I "Done"
 	fi
 
@@ -471,6 +489,9 @@ bts_step()
 
 	BTS_CURRENT_SOURCE_DIR=
 	BTS_CURRENT_BUILD_DIR=
+
+	BTS_STEP_STARTED_FILE="${BUILD_STEP_FILE}.in-progress"
+	touch -m "${BTS_STEP_STARTED_FILE}"
 
 	return 0
 }
