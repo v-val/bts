@@ -121,7 +121,7 @@ export -f bts_get_duration_
 #   or
 # * As 1st positional argument
 [ -z "${BTS_RECIPE:-}" -a $# -gt 0 ] \
-  && BTS_RECIPE="$1" && shift
+        && BTS_RECIPE="$1" && shift || :
 
 BTS_RECIPE_DEFAULT="${BTS_APP_ID}recipe"
 #
@@ -232,7 +232,7 @@ bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
 # NB: OS-specific
 #
 export BTS_ARCH="$(uname -m)"
-export BTS_ARCH_SUFFIX=$([[ "${BTS_ARCH}" =~ 64$ ]] && echo "64" || : )
+export BTS_ARCH_SUFFIX=$( [[ "${BTS_ARCH}" =~ 64$ ]] && echo "64" || : )
 #
 # Name of lib dir for libraries built
 export BTS_LIB_DIR_BASE_NAME=lib
@@ -266,11 +266,11 @@ cygwin)
 linux*)
 	if [ -f "/etc/redhat-release" ]
 	then
-	  export BTS_OS_FAMILY=${BTS_OS_FAMILY_EL}
-	  export BTS_OS_GENERATION_=$(perl -pe 's,^\D*(\d+).*,$1,' < /etc/redhat-release)
-	  export BTS_OS_FAMILY_GENERATION=${BTS_OS_FAMILY}${BTS_OS_GENERATION_}
-		Platform_EL=${BTS_OS_FAMILY_GENERATION}
-    bts_D "Detected platform ${BTS_OS_FAMILY_GENERATION}"
+        export BTS_OS_FAMILY=${BTS_OS_FAMILY_EL}
+        export BTS_OS_GENERATION_=$(perl -pe 's,^\D*(\d+).*,$1,' < /etc/redhat-release)
+        export BTS_OS_FAMILY_GENERATION=${BTS_OS_FAMILY}${BTS_OS_GENERATION_}
+        Platform_EL=${BTS_OS_FAMILY_GENERATION}
+        bts_D "Detected platform ${BTS_OS_FAMILY_GENERATION}"
 	else
 		bts_F "Unsupported OS family ${OSTYPE}"
 	fi
@@ -330,17 +330,17 @@ export -f bts_compiler_get_version
 # Sets BTS_ROOT and other common vars, creates directory structure
 bts_init()
 {
-  # By default we create BTS_ROOT under "/opt"
-  # that can be overridden with BTS_ROOT_PARENT
-  local BTS_ROOT_PARENT=${BTS_ROOT_PARENT:-"/opt"}
-  # Default BTS_ROOT name is ${BTS_JOB_NAME}[-${BTS_JOB_VERSION}]
-  # where BTS_JOB_NAME taken from recipe file name
-  # and BTS_JOB_VERSION taken from variable named "${BTS_JOB_NAME^^}_VERSION"
-  local BTS_V_JOB_VERSION=$(sed -Ee 's,\W+,_,g; s,^_+,,' <<< "${BTS_JOB_NAME^^}_VERSION")
-  eval local BTS_JOB_VERSION='${'${BTS_V_JOB_VERSION}':-}'
-  local BTS_ROOT_DEFAULT_NAME="${BTS_JOB_NAME}${BTS_JOB_VERSION:+-${BTS_JOB_VERSION}}"
-  #
-  # User may set BTS_ROOT explicitly
+    # By default we create BTS_ROOT under "/opt"
+    # that can be overridden with BTS_ROOT_PARENT
+    local BTS_ROOT_PARENT=${BTS_ROOT_PARENT:-"/opt"}
+    # Default BTS_ROOT name is ${BTS_JOB_NAME}[-${BTS_JOB_VERSION}]
+    # where BTS_JOB_NAME taken from recipe file name
+    # and BTS_JOB_VERSION taken from variable named "${BTS_JOB_NAME^^}_VERSION"
+    local BTS_V_JOB_VERSION=$(sed -Ee 's,\W+,_,g; s,^_+,,' <<< "${BTS_JOB_NAME^^}_VERSION")
+    eval local BTS_JOB_VERSION='${'${BTS_V_JOB_VERSION}':-}'
+    local BTS_ROOT_DEFAULT_NAME="${BTS_JOB_NAME}${BTS_JOB_VERSION:+-${BTS_JOB_VERSION}}"
+    #
+    # User may set BTS_ROOT explicitly
 	BTS_ROOT=${BTS_ROOT:-}
 	# Else user may pass BTS_ROOT as first positional parameter
 	[ -z "${BTS_ROOT}" -a $# -gt 0 ] && BTS_ROOT="$1" && shift || true
@@ -348,7 +348,7 @@ bts_init()
 	[ "${BTS_ROOT}" ] || BTS_ROOT="${BTS_ROOT_PARENT%%/}/${BTS_ROOT_DEFAULT_NAME}"
 	[ "${BTS_ROOT}" ] || bts_F "BTS_ROOT is not defined"
 	export BTS_ROOT
-  # Default dir for built programs
+    # Default dir for built programs
 	export BTS_BIN_DIR="${BTS_ROOT}/bin"
 	[ -d "${BTS_BIN_DIR}" ] || mkdir -p "${BTS_BIN_DIR}"
 	# Default dir for built superuser programs
@@ -371,9 +371,9 @@ bts_init()
 	[ -e "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
 	(pushd . >/dev/null 2>&1; cd "${BTS_WORK_DIR}" ; popd >/dev/null 2>&1)
 	# Conf dir, now storing only profile
-	export BTS_CONF_DIR="${BTS_WORK_DIR}/etc"
-	[ -d "${BTS_CONF_DIR}" ] || mkdir -p "${BTS_CONF_DIR}"
-  # _Exported_ environment vars for user builds
+#	export BTS_CONF_DIR="${BTS_WORK_DIR}/etc"
+#	[ -d "${BTS_CONF_DIR}" ] || mkdir -p "${BTS_CONF_DIR}"
+    # _Exported_ environment vars for user builds
 	export BTS_PROFILE=${BTS_PROFILE:-"${BTS_ROOT}/enable"}
 	# _Private_ environment vars for build of toolset
 	export BTS_PRIVATE_PROFILE="${BTS_WORK_DIR}/.profile"
@@ -398,10 +398,10 @@ EOF
 	export BTS_CMAKE_PREFIX_PATH=${BTS_CMAKE_PREFIX_PATH:-}
 	#
 	TAG=
-  ARCHIEVED_DIR=
-  BTS_GET_DIR=
-  LOCAL_REPO=
-  SCHEME=
+    ARCHIEVED_DIR=
+    BTS_GET_DIR=
+    LOCAL_REPO=
+    SCHEME=
   #
 #  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_DEBUG} ] \
 #    || \
@@ -414,6 +414,21 @@ EOF
 	touch "${BTS_FLAG_FILE_DISABLED}"
 }
 export -f bts_init
+
+
+#
+# Remove [blank-separated] paths from BTS_CLEAN_LIST
+#
+bts_clean()
+{
+    if [ "${BTS_CLEAN_LIST:-}" ]
+    then
+        bts_T "Clean ${BTS_CLEAN_LIST}"
+        rm -rf ${BTS_CLEAN_LIST:-}
+        BTS_CLEAN_LIST=
+    fi
+}
+export -f bts_clean
 
 
 bts_end()
@@ -435,6 +450,7 @@ bts_end()
                 "${BTS_STEP_ID:-}" -a ${BTS_STEP_ID:--1} -gt 0 ]
         then
             #  cd "${BTS_WORK_DIR}"
+            bts_clean
             ALERT_MESSAGE_="Done${BTS_JOB_DURATION_S_}"
             bts_N "${ALERT_MESSAGE_}"
         elif bts_step_is_in_progress_; then
@@ -474,8 +490,8 @@ EOF
 
         if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
         then
-          rm -vf "${BTS_FLAG_FILE_DISABLED}"
-          echo "${BTS_JOB_FINISH_TIME_} ${BTS_JOB_DURATION_}" > "${BTS_ROOT}/.updated"
+            rm -vf "${BTS_FLAG_FILE_DISABLED}"
+            echo "${BTS_JOB_FINISH_TIME_} ${BTS_JOB_DURATION_}" > "${BTS_ROOT}/.updated"
         fi
   fi
 
@@ -553,10 +569,10 @@ export -f bts_env
 
 bts_configure()
 {
-  local prefix_=${BTS_CONFIGURE_PREFIX:-"${BTS_ROOT}"}
-  local libdir_=${BTS_CONFIGURE_LIBDIR:-"${prefix_}/${BTS_LIB_DIR_NAME}"}
-  [ "${libdir_}" ] || libdir_="${BTS_LIB_DIR}"
-	bts_env ${BTS_CONFIGURE_DIR:-.}/configure --prefix="${prefix_}" --libdir="${libdir_}" "$@"
+    local prefix_=${BTS_CONFIGURE_PREFIX:-"${BTS_ROOT}"}
+    local libdir_=${BTS_CONFIGURE_LIBDIR:-"${prefix_}/${BTS_LIB_DIR_NAME}"}
+    [ "${libdir_}" ] || libdir_="${BTS_LIB_DIR}"
+    bts_env ${BTS_CONFIGURE_DIR:-.}/configure --prefix="${prefix_}" --libdir="${libdir_}" "$@"
 }
 export -f bts_configure
 
@@ -572,19 +588,18 @@ export -f bts_make
 export BTS_DEFAULT_BUILD_TYPE="Release"
 bts_cmake()
 {
-  local GENERATOR_=${BTS_CMAKE_GENERATOR_:-"Ninja Multi-Config"}
-  local DASH_G_
-  DASH_G_=-G"${GENERATOR_}"
-  bts_V "Use '${GENERATOR_}'"
-#  bts_D "Command: cmake -G\"${GENERATOR_}\" -DCMAKE_INSTALL_PREFIX=\"${BTS_ROOT}\" -DCMAKE_PREFIX_PATH=\"${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}\" \"$@\""
-  BTS_PROFILE="${BTS_PROFILE}" \
-	bts_env cmake \
-	  -G"${GENERATOR_}" \
-	  -DBUILD_TYPE="${BTS_BUILD_TYPE:-${BTS_DEFAULT_BUILD_TYPE}}" \
-	  -DCMAKE_BUILD_TYPE="${BTS_BUILD_TYPE:-${BTS_DEFAULT_BUILD_TYPE}}" \
-	  -DCMAKE_INSTALL_PREFIX=${BTS_CMAKE_INSTALL_PREFIX:-"${BTS_ROOT}"} \
-	  -DCMAKE_PREFIX_PATH="${BTS_ROOT}${BTS_CMAKE_PREFIX_PATH:+;${BTS_CMAKE_PREFIX_PATH}}" \
-	  "$@"
+    local GENERATOR_=${BTS_CMAKE_GENERATOR_:-"Ninja Multi-Config"}
+    local DASH_G_=-G"${GENERATOR_}"
+    bts_V "Use '${GENERATOR_}'"
+    #  bts_D "Command: cmake -G\"${GENERATOR_}\" -DCMAKE_INSTALL_PREFIX=\"${BTS_ROOT}\" -DCMAKE_PREFIX_PATH=\"${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}\" \"$@\""
+    BTS_PROFILE="${BTS_PROFILE}" \
+    bts_env cmake \
+            -G"${GENERATOR_}" \
+            -DBUILD_TYPE="${BTS_BUILD_TYPE:-${BTS_DEFAULT_BUILD_TYPE}}" \
+            -DCMAKE_BUILD_TYPE="${BTS_BUILD_TYPE:-${BTS_DEFAULT_BUILD_TYPE}}" \
+            -DCMAKE_INSTALL_PREFIX=${BTS_CMAKE_INSTALL_PREFIX:-"${BTS_ROOT}"} \
+            -DCMAKE_PREFIX_PATH="${BTS_ROOT}${BTS_CMAKE_PREFIX_PATH:+;${BTS_CMAKE_PREFIX_PATH}}" \
+            "$@"
 }
 export -f bts_cmake
 
@@ -598,7 +613,12 @@ export -f bts_cmake_build_install
 
 bts_step_make_id_() {
     [ $# -gt 0 ] || bts_F "\`bts_step_make_id_\`: mandatory argument(s) missing"
-    perl -pe 's,[^\w\.]+,-,g; s,^\-|\-$,,g' <<< "$@"
+    perl -pe '
+        s,^\s*(install|create)\b\W*,,i ;
+        s,[^\w\.]+,-,g ;
+        s,^\-|\-$,,g ;
+        $_ = lc ;
+        ' <<< "$@"
 }
 export -f bts_step_make_id_
 
@@ -620,7 +640,7 @@ bts_step()
     # @param BTS_SCOPE_NAME_ - mandatory, must be non-empty
     # First call opens the scope
     # Second call closes one
-    
+
     # Check usage
     [ $# -gt 0 ] || bts_F "\`bts_step\`: mandatory argument(s) missing"
     #
@@ -634,6 +654,8 @@ bts_step()
     # ID identifies current scope with file system entries
     local BTS_SCOPE_ID_=$(bts_step_make_id_ "${BTS_SCOPE_NAME_}")
     local BTS_SCOPE_FLAG_FILE_=$(bts_step_make_flag_file_name_ "${BTS_SCOPE_NAME_}")
+    # We need scope id to be global
+    export BTS_STEP_TAG=${BTS_SCOPE_ID_}
 
     # V identifies current scope with shell variables
     local BTS_SCOPE_V_="BTS_SCOPE_V_"$(perl -pe 's,\W+,_,g; s,^_|_$,,g;' <<< "${BTS_SCOPE_ID_}")"_"
@@ -658,7 +680,8 @@ bts_step()
         return 1
 	elif [ ${BTS_SCOPE_STATUS_} -eq 2 ]
 	then
-	    local BTS_STEP_FINISH_TIME_=$(bts_get_timestamp_)
+	    bts_clean
+        local BTS_STEP_FINISH_TIME_=$(bts_get_timestamp_)
 	    BTS_STEP_DURATION_=$(bts_get_duration_ ${BTS_STEP_START_TIME_} ${BTS_STEP_FINISH_TIME_})
 		echo "${BTS_STEP_START_TIME_} ${BTS_STEP_DURATION_}" > "${BTS_SCOPE_FLAG_FILE_}"
 		# Global, to enable access from `bts_F` and in similar cases
@@ -696,49 +719,45 @@ export -f bts_step
 bts_build_dir()
 {
 	BTS_CURRENT_SOURCE_DIR="${PWD}"
-	BTS_CURRENT_BUILD_DIR="${BTS_WORK_DIR}/${BTS_CURRENT_SOURCE_DIR##*/}.build"
+	if [ "${BTS_BUILD_DIR:-}" ]
+	then
+	    BTS_CURRENT_BUILD_DIR=${BTS_BUILD_DIR}/.${BTS_APP_ID}${BTS_STEP_TAG:+.${BTS_STEP_TAG}}.${PWD##*/}.build
+	else
+	    BTS_CURRENT_BUILD_DIR=${BTS_CURRENT_SOURCE_DIR}.build
+	fi
+	bts_T "build_dir ${BTS_CURRENT_BUILD_DIR}"
 	[ -d "${BTS_CURRENT_BUILD_DIR}" ] || mkdir -p "${BTS_CURRENT_BUILD_DIR}"
 	cd "${BTS_CURRENT_BUILD_DIR}"
-	bts_D "Changed to ${PWD}"
+	[ "${BTS_NO_CLEAN:-}" ] || BTS_CLEAN_LIST=${BTS_CLEAN_LIST:+"${BTS_CLEAN_LIST} "}"${PWD}"
+	bts_D "In ${PWD}"
 }
 export -f bts_build_dir
 
 
 bts_untar()
 {
-  local FILE_="$1"
-  shift
-  # Exactly one positional parameter accepted
-  [ $# -eq 0 ] || bts_F "\`bts_untar\`: unexpected usage \`bts_untar \"${FILE}\" \"$@\"\`"
-  local ARGS_=
-  local TR_=
-  case "${FILE_}" in
-  *[Gg][Zz])
-    ARGS_="z"
-    ;;
-  *[Bb][Zz]|*[Bb][Zz]2|*[Bb][Zz][Ii][Pp]|*[Bb][Zz][Ii][Pp]2)
-    ARGS_="j"
-    ;;
-  *[Xx][Zz])
-    ARGS_="J"
-    ;;
-  *[Tt][Aa][Rr])
-    ;;
-  *)
-    bts_F "Don't know how to extract '${FILE_}'"
-    ;;
-  esac
-#  bts_W "BTS_GET_TOP_DIR '${BTS_GET_TOP_DIR:-}'"
-  local TOPDIR_EXPECTED_=${BTS_GET_TOP_DIR:-$(sed -Ee 's,\.t(ar\.)?(gz|[bl]z(ip)?2?|xz)$,,' <<< "${FILE_}")}
-  #
-  # TODO: handle archives with multiple top directories
-  # One has `for` here because `$()` returns some trailing garbage one failed to remove
-  for TOPDIR_ in $(tar t${ARGS_}f ${FILE_} | head -1 | sed -s 's,/.*,,' || true)
-  do
-    [ "${TOPDIR_}" == "${TOPDIR_EXPECTED_}" ] || TR_="--transform=s,^${TOPDIR_%%/*},${TOPDIR_EXPECTED_},"
-  done
-#  bts_T "untar command: bts_env tar x${ARGS_}f \"${FILE_}\" ${TR_}"
-  bts_env tar x${ARGS_}f "${FILE_}" ${TR_}
+    local FILE_="$1"
+    shift
+    # Exactly one positional parameter accepted
+    [ $# -eq 0 ] || bts_F "\`bts_untar\`: unexpected usage \`bts_untar \"${FILE}\" \"$@\"\`"
+    local ARGS_=
+    case "${FILE_,,}" in
+    *gz)
+        ARGS_="z"
+        ;;
+    *bz|*bz2|*bzip|*bzip2)
+        ARGS_="j"
+        ;;
+    *xz)
+        ARGS_="J"
+        ;;
+    *tar)
+        ;;
+    *)
+        bts_F "Don't know how to extract '${FILE_}'"
+        ;;
+    esac
+    bts_env tar x${ARGS_}f "${FILE_}"
 }
 export -f bts_untar
 
@@ -750,12 +769,30 @@ bts_unzip()
 export -f bts_unzip
 
 
+#
+# Provision for using helper service
+bts_fetch()
+{
+    local destination="$1"
+    shift
+    local source="$1"
+    shift
+    if [ "${BTS_GET_HELPER:-}" ]
+    then
+        bts_env curl -#knL -o "${destination}" -H"BTS-Get-URL: ${source}" "${BTS_GET_HELPER:-}"
+    else
+        bts_env curl -#knL -o "${destination}" "${source}"
+    fi
+}
+export -f bts_fetch
+
+
 # Downloads and extracts sources
 bts_get()
 {
 	local url="$1"
 	shift
-	bts_D "bts_get URL = ${url}"
+	bts_D "get ${url}"
 	# Many URL end with source code archive file
 	# In other cases "file" would be repository name
 	local file="${url}"
@@ -763,27 +800,49 @@ bts_get()
 	file=${file%/download}
 	# Leave only trailing component
 	file=${file##*/}
+	# Drop query string
+	file=$(perl -pe 's,[?&].*$,,' <<< "${file}")
+	bts_T "get assume result '${file}'"
 	# For CVS repo passed as separate arg
 	local dir
 	# bts_extract_dir
 	local BTS_EXTRACT_DIR=${BTS_EXTRACT_DIR:-}
 	local BTS_NOCD=${BTS_NOCD:-}
 
-  # TODO: rework
+	# Often name of downloaded file can be derived from URL.
+	# Unfortunately this is not always the case.
+	# To be positive about the name of downloaded file
+	# one fetch files to dir with "unique" name.
+	local BTS_GET_DIR_=${BTS_GET_DIR:-${BTS_WORK_DIR}}
+#	local BTS_GET_LIST_="${BTS_GET_DIR_}/.bts-get.list"
+#	local BTS_GET_SOURCE_DIGEST=$(openssl dgst -sha224 <<< "${url}" | cut -f2 -d' ')
+#	egrep -iqs "^${BTS_GET_SOURCE_DIGEST}\\b" "${BTS_GET_LIST_}" \
+#	        || echo "${BTS_GET_SOURCE_DIGEST} ${url}" >> "${BTS_GET_LIST_}"
+	local BTS_GET_CURRENT_DOWNLOAD_DIR=${BTS_GET_DIR_}/.${BTS_APP_ID}${BTS_STEP_TAG:+.${BTS_STEP_TAG}}${file:+.${file}}
+	[ -d "${BTS_GET_CURRENT_DOWNLOAD_DIR}" ] || mkdir -p "${BTS_GET_CURRENT_DOWNLOAD_DIR}"
+	pushd . >/dev/null 2>&1
+	cd "${BTS_GET_CURRENT_DOWNLOAD_DIR}"
+	bts_T "get in '${PWD}'"
+	[ "${BTS_NO_CLEAN:-}" ] || BTS_CLEAN_LIST=${BTS_CLEAN_LIST:+"${BTS_CLEAN_LIST} "}"${PWD}"
+
+    # TODO: rework
 	if [ "${SCHEME}" = "git" ] || egrep -iqs '\.(git)$' <<< "${file}"
 	then
 		dir=$(sed -e 's,\.git$,,i' <<< "${file}")
-		local opt_ref_=""
-		if [ "${TAG}" ]
+		local opt_ref_=
+		if [ "${TAG:-}" ]
 		then
 		  dir="${dir}-${TAG}"
 		  opt_ref_="-b${TAG}"
 		fi
 		[ -d "${dir}" ] || git clone --depth 1 ${opt_ref_} --recurse-submodules "$@" "${url}" "${dir}"
 		cd "${dir}"
-#		[ "${TAG}" ] && git checkout tags/"${TAG}"
+    # [ "${TAG}" ] && git checkout tags/"${TAG}"
 	elif [ "${SCHEME}" = "svn" ] || egrep -iqs '^svn://' <<< "${url}"
 	then
+	    #
+	    # Not really supporting SVN
+	    #
 		local SCHEME="svn"
 		[ "${LOCAL_REPO}" ] || bts_F "Schema ${SCHEME} requires LOCAL_REPO to be set"
 		dir="${LOCAL_REPO}"
@@ -791,9 +850,12 @@ bts_get()
 		cd "${dir}"
 	elif [ "${SCHEME}" = "cvs" ] || egrep -iqs '^cvs:/*' <<< "${url}"
 	then
+	    #
+	    # Not really supporting CVS
+	    #
 		local SCHEME="cvs"
 		local repo="${1:-}"
-    shift
+        shift
 		local url_=$(sed -e 's,^cvs:/*,,i' <<< "${url}")
 		# Todo: checkout to dir passed with LOCAL_REPO if specified
 		[ "${repo}" ] || bts_F "Schema ${SCHEME} requires repository name passed as last arg"
@@ -804,60 +866,73 @@ bts_get()
 		[ -d "${dir}" ] || ${cmd}
 		cd "${dir}"
 	elif [ "${SCHEME}" = "rsync" ] ### Invent scheme for rsync ?? || echo "${url}" | egrep -iqs '^cvs:/*'
-  then
-    local SCHEME="rsync"
-    local url_="${url}"
-    dir="${url_##*/}"
-    local cmd="rsync -az ${url_}"
-    cmd="${cmd} ${repo:-.}"
-    [ -z "${BTS_GET_FORCE:-}" -a -d "${dir}" ] || ${cmd}
-    cd "${dir}"
+    then
+        #
+        # Not really supporting RSYNC
+        #
+        local SCHEME="rsync"
+        local url_="${url}"
+        dir="${url_##*/}"
+        local cmd="rsync -az ${url_}"
+        cmd="${cmd} ${repo:-.}"
+        [ -z "${BTS_GET_FORCE:-}" -a -d "${dir}" ] || ${cmd}
+        cd "${dir}"
 	else
-	  local archive_type_
-	  local extract_fn_
-	  if egrep -iqs '\.(tar|t(ar\.)?(gz|bz2?|xz))$' <<< "${file}"
-    then
-      archive_type_="tar"
-      extract_fn_="bts_untar"
-      dir=$(echo "${file}" | perl -pe 's,\.(tar|t(ar\.)?(gz|bz2?|xz))$,,i')
-      bts_D "File '${file}', expected dir '${dir}'"
-    elif egrep -iqs '\.zip$' <<< "${file}"
-    then
-      archive_type_="zip"
-      extract_fn_="bts_unzip"
-      dir=$(sed -Ee 's,\.zip$,,i' <<< "${file}")
-    else
-			bts_F "Unsupported archive ${file}"
-    fi
-    # Archived directory can be override
-    [ "${ARCHIEVED_DIR}" ] \
-      && dir="${ARCHIEVED_DIR}"
-    # Fetch file
-    [ -f "${file}" ] || curl -#nL -o "${file}" "${url}"
-    # Extract file
-    if [ "${BTS_GET_DIR:-}" ]
-    then
-      [ -d "${BTS_GET_DIR}" ] || mkdir -p "${BTS_GET_DIR}"
-      cd "${BTS_GET_DIR}"
-      ${extract_fn_} "${BTS_WORK_DIR}/${file}"
-    else
-      ${extract_fn_} "${file}"
-    fi
-    if [ "${BTS_NOCD:-}" ]
-    then
-      :
-    elif [ "${BTS_GET_TOP_DIR:-}" ]
-    then
-      cd "${BTS_GET_TOP_DIR}"
-    elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
-    then
-      cd "${BTS_EXTRACT_DIR}"
-    elif [ -d "${dir}" ]
-    then
-      cd "${dir}"
-    fi
+	    #
+	    # Fetch with CURL and extract
+	    #
+        local archive_type_
+        local extract_fn_
+        if egrep -iqs '\.(tar|t(ar\.)?(gz|bz2?|xz))$' <<< "${file}"
+        then
+            archive_type_="tar"
+            extract_fn_="bts_untar"
+            dir=$(echo "${file}" | perl -pe 's,\.(tar|t(ar\.)?(gz|bz2?|xz))$,,i')
+            bts_D "File '${file}', expected dir '${dir}'"
+        elif egrep -iqs '\.zip$' <<< "${file}"
+        then
+            archive_type_="zip"
+            extract_fn_="bts_unzip"
+            dir=$(sed -Ee 's,\.zip$,,i' <<< "${file}")
+        else
+			bts_T "get '${file}' doesn't look as archive, fetch without extracting"
+		fi
+        # Archived directory can be overridden
+        [ "${ARCHIEVED_DIR:-}" ] && dir="${ARCHIEVED_DIR}" || :
+        # Fetch file
+		[ -f "${file}" ] || bts_fetch "${file}" "${url}"
+        # Extract file
+        if [ "${BTS_GET_DIR:-}" ]
+        then
+            [ -d "${BTS_GET_DIR}" ] || mkdir -p "${BTS_GET_DIR}"
+            cd "${BTS_GET_DIR}"
+            ${extract_fn_} "${BTS_WORK_DIR}/${file}"
+        elif [ "${extract_fn_:-}" ]
+        then
+            ${extract_fn_} "${file}"
+        fi
+        #
+        # Downloaded and extracted
+        #
+        if [ "${BTS_NOCD:-}" ]
+        then
+            bts_T "get not changing to extracted directory: BTS_NOCD=${BTS_NOCD}"
+        elif [ "${BTS_GET_TOP_DIR:-}" ]
+        then
+            cd "${BTS_GET_TOP_DIR}"
+            bts_D "get in BTS_GET_TOP_DIR ${PWD}"
+        elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
+        then
+            cd "${BTS_EXTRACT_DIR}"
+            bts_D "get in BTS_EXTRACT_DIR ${PWD}"
+        elif [ -d "${dir:-}" ]
+        then
+            cd "${dir}"
+	        bts_D "Changed to ${PWD}"
+	    else
+	        bts_T "get can't guess dir to change to, stay in ${PWD}"
+        fi
 	fi
-	bts_D "Changed to ${PWD}"
 }
 export -f bts_get
 
