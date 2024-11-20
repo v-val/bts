@@ -315,6 +315,7 @@ trap bts_end EXIT ERR
 # NB: OS-specific
 bts_pkg()
 {
+    BTS_PKG_REPORT=${BTS_PKG_REPORT:-${BTS_WORK_DIR}/.bts-pkg}
 	case "${Platform}" in
 	rh)
         if [ "${Platform_EL}" = "EL8" ]
@@ -326,6 +327,8 @@ bts_pkg()
         else
             bts_F "Unsupported platform '${Platform}' version '${Platform_EL}'"
         fi
+        # Log package installation
+        grep -iqsF "$@" "${BTS_PKG_REPORT}" || echo "$@" >> "${BTS_PKG_REPORT}"
         ;;
     cygwin)
         if ! command -v apt-cyg >/dev/null 2>&1
