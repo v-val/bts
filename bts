@@ -674,7 +674,34 @@ bts_get()
         # Archived directory can be overridden
         [ "${ARCHIEVED_DIR:-}" ] && dir="${ARCHIEVED_DIR}" || :
         # Fetch file
-		[ -f "${file}" ] || bts_fetch "${file}" "${url}"
+        if [ "${BTS_GET_BACKUP_DIR:-}" ]
+        then
+            local LOCAL_COPY_="${BTS_GET_BACKUP_DIR}/${file}"
+            if [ -e "${LOCAL_COPY_}" ]
+            then
+                bts_D "Use local copy from \"${BTS_GET_BACKUP_DIR:-}\""
+                curl -#O file://"${LOCAL_COPY_}"
+            fi
+        fi
+
+        if [ ! -e "${file}" ]
+        then
+            if [ "${BTS_GET_BACKUP_DIR:-}" ]
+            then
+                [ -e "${BTS_GET_BACKUP_DIR}" ] || mkdir -p "${BTS_GET_BACKUP_DIR}"
+                pushd
+                cd "${BTS_GET_BACKUP_DIR:-}"
+            fi
+
+            ${BTS_FETCH_UNSAFE:-${BTS_GET_UNSAFE:-}} bts_fetch "${file}" "${url}"
+
+            if [ "${BTS_GET_BACKUP_DIR:-}" ]
+            then
+                popd
+                curl -#O file://"${LOCAL_COPY_}"
+            fi
+        fi
+
         # Extract file
         if [ "${BTS_GET_DIR:-}" ]
         then
