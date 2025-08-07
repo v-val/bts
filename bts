@@ -198,6 +198,27 @@ fi
 #
 ################################################################
 #
+# Count steps
+#
+BTS_STEPS_TOTAL_COUNT=0
+BTS_STEP_COUNT_FILE=".${BTS_APP_ID}.${BTS_JOB_NAME}-step-count"
+if [ -z "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+then
+    bts_D "Getting step count"
+    BTS_APP_WRAPPED_=1 \
+    BTS_MODE_COUNT_STEPS_ONLY=1 \
+    BTS_RECIPE="${BTS_RECIPE}" \
+        bash -Eeuo pipefail -c "$0" "$@"
+fi
+if [ -f "${BTS_STEP_COUNT_FILE}" ]
+then
+    BTS_STEPS_TOTAL_COUNT=$(cat "${BTS_STEP_COUNT_FILE}")
+    rm -f "${BTS_STEP_COUNT_FILE}"
+    bts_D "Total step count ${BTS_STEPS_TOTAL_COUNT}"
+fi
+
+################################################################
+#
 # Real job starts here.
 #
 bts_D "Start pid=$$"
@@ -262,21 +283,21 @@ bts_init()
 	export BTS_ROOT
   # Default dir for built programs
 	export BTS_BIN_DIR="${BTS_ROOT}/bin"
-	[ -d "${BTS_BIN_DIR}" ] || mkdir -p "${BTS_BIN_DIR}"
+	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -d "${BTS_BIN_DIR}" ] || mkdir -p "${BTS_BIN_DIR}"
 	# Default dir for built superuser programs
 	export BTS_SBIN_DIR="${BTS_ROOT}/sbin"
-	[ -d "${BTS_SBIN_DIR}" ] || mkdir -p "${BTS_SBIN_DIR}"
+	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -d "${BTS_SBIN_DIR}" ] || mkdir -p "${BTS_SBIN_DIR}"
 	# Default dir for built libraries
 	export BTS_LIB_DIR_NAME="lib${BTS_ARCH_SUFFIX}"
 	export BTS_LIB_DIR="${BTS_ROOT}/${BTS_LIB_DIR_NAME}"
-	[ -d "${BTS_LIB_DIR}" ] || mkdir -p "${BTS_LIB_DIR}"
+	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -d "${BTS_LIB_DIR}" ] || mkdir -p "${BTS_LIB_DIR}"
 	# Default dir for headers
 	export BTS_INCLUDE_DIR="${BTS_ROOT}/include"
-	[ -d "${BTS_INCLUDE_DIR}" ] || mkdir -p "${BTS_INCLUDE_DIR}"
+	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -d "${BTS_INCLUDE_DIR}" ] || mkdir -p "${BTS_INCLUDE_DIR}"
 	# Top dir for source and build dirs
 	export BTS_WORK_DIR=${BTS_WORK_DIR:-"${BTS_ROOT}/.${BTS_APP_ID}"}
-	[ -e "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
-	(pushd . >/dev/null 2>&1; cd "${BTS_WORK_DIR}" ; popd >/dev/null 2>&1)
+	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -e "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
+	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ] || (pushd . >/dev/null 2>&1; cd "${BTS_WORK_DIR}" ; popd >/dev/null 2>&1)
 	# Conf dir, now storing only profile
 #	export BTS_CONF_DIR="${BTS_WORK_DIR}/etc"
 #	[ -d "${BTS_CONF_DIR}" ] || mkdir -p "${BTS_CONF_DIR}"
@@ -302,12 +323,12 @@ EOF
 	export BTS_CMAKE_PREFIX_PATH=${BTS_CMAKE_PREFIX_PATH:-}
 	#
 	TAG=
-  ARCHIEVED_DIR=
-  BTS_GET_DIR=
-  LOCAL_REPO=
-  SCHEME=
-  # Inform external world  that we're not ready
-	touch "${BTS_ROOT}/.disabled"
+    ARCHIEVED_DIR=
+    BTS_GET_DIR=
+    LOCAL_REPO=
+    SCHEME=
+    # Inform external world  that we're not ready
+    [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ] || touch "${BTS_ROOT}/.disabled"
 }
 export -f bts_init
 
@@ -330,6 +351,11 @@ export -f bts_clean
 bts_end()
 {
     local LAST_RC_=$?
+    if [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+    then
+        echo ${BTS_STEPS_TOTAL_COUNT} > "${BTS_STEP_COUNT_FILE}"
+        return ${LAST_RC_}
+    fi
     bts_D "
     LAST_RC_    ${LAST_RC_}
     BTS_STEP_ID ${BTS_STEP_ID:-}
@@ -490,6 +516,13 @@ export -f bts_dump_updated_files
 
 bts_step()
 {
+    if [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+    then
+        BTS_STEPS_TOTAL_COUNT=$(( ${BTS_STEPS_TOTAL_COUNT} + 1 ))
+#        bts_T "Counting steps: +1 = ${BTS_STEPS_TOTAL_COUNT}"
+        return 1
+    fi
+
 	[ -d "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
 	cd "${BTS_WORK_DIR}"
 #	echo "  * Changed to ${PWD}"
@@ -519,7 +552,7 @@ bts_step()
 	bts_T "step tag ${BTS_STEP_TAG}"
 	BUILD_STEP_FILE=".${BTS_APP_ID}.${BTS_STEP_TAG}"
 
-	bts_N "${BTS_STEP_ID} ${BUILD_STEP_DESC_}"
+	bts_N "${BTS_STEP_ID} of ${BTS_STEPS_TOTAL_COUNT}: ${BUILD_STEP_DESC_}"
 	if [ -f "${BUILD_STEP_FILE}" ]
 	then
 		bts_I "Skip [already done]"
