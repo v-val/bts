@@ -446,18 +446,19 @@ export -f bts_pkg
 bts_env()
 {
 	(
-#	  set -x
-	  [ ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}"
-#	  env | egrep '^\S' | egrep '^BTS|PATH|FLAGS' | sort
-#	  bts_F "AAA"
-	  command "$@"
-  )
-  local rc_=$?
-  : || bts_D "Command:
-  \"$@\"
-returned ${rc_}
-  "
-  return ${rc_}
+#	    [ -z "${BTS_ENV_SET_X_:-}" ] || set -x
+        [ ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}"
+        [ -z "${BTS_ENV_SHOW_FLAGS:-}" ] || env | egrep '^\w*(PATH|FLAGS)\w*' | sort
+        command "$@"
+        local RC_=$?
+        : || bts_D "Command:
+\"$@\"
+returned ${RC_}
+"
+#        [ -z "${BTS_ENV_SET_X_:-}" ] || set +x
+        [ ${RC_} -eq 0 ]
+#        return ${RC_}
+    )
 }
 export -f bts_env
 
