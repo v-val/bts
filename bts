@@ -93,6 +93,15 @@ bts_F() {
 }
 export -f bts_F
 
+#
+# Auto-set vars, affecting further behaviour
+#
+# Curl progress flags: '#' if there's tty and '-s' otherwise
+[ "${BTS_HAVE_TTY_}" ] \
+    && BTS_CURL_PROGRESS_FLAG_='#' \
+    || BTS_CURL_PROGRESS_FLAG_='s'
+
+
 #bts_T "Trace data"
 #bts_D "Debug info"
 #bts_V "Verbose note"
@@ -406,7 +415,7 @@ bts_pkg()
         if ! command -v apt-cyg >/dev/null 2>&1
         then
             bts_N "apt-cyg missing"
-            curl -nOL https://raw.githubusercontent.com/transcode-open/apt-cyg/master/apt-cyg
+            curl -${BTS_CURL_PROGRESS_FLAG_}nLO https://raw.githubusercontent.com/transcode-open/apt-cyg/master/apt-cyg
             if [ ! -d ~/exec ]
             then
                 mkdir ~/exec
@@ -626,9 +635,9 @@ bts_fetch()
     shift
     if [ "${BTS_GET_HELPER:-}" ]
     then
-        bts_env curl -#knL -o "${destination}" -H"BTS-Get-URL: ${source}" "${BTS_GET_HELPER:-}"
+        bts_env curl -${BTS_CURL_PROGRESS_FLAG_}${BTS_FETCH_UNSAFE:+'k'}nLo "${destination}" -H"BTS-Get-URL: ${source}" "${BTS_GET_HELPER:-}"
     else
-        bts_env curl -#knL -o "${destination}" "${source}"
+        bts_env curl -${BTS_CURL_PROGRESS_FLAG_}${BTS_FETCH_UNSAFE:+'k'}nLo "${destination}" "${source}"
     fi
 }
 export -f bts_fetch
@@ -749,7 +758,7 @@ bts_get()
             if [ -e "${LOCAL_COPY_}" ]
             then
                 bts_D "Use local copy from \"${BTS_GET_BACKUP_DIR:-}\""
-                curl -#O file://"${LOCAL_COPY_}"
+                curl -${BTS_CURL_PROGRESS_FLAG_}O file://"${LOCAL_COPY_}"
             fi
         fi
 
@@ -767,7 +776,7 @@ bts_get()
             if [ "${BTS_GET_BACKUP_DIR:-}" ]
             then
                 popd
-                curl -#O file://"${LOCAL_COPY_}"
+                curl -${BTS_CURL_PROGRESS_FLAG_}O file://"${LOCAL_COPY_}"
             fi
         fi
 
