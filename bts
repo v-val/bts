@@ -117,7 +117,7 @@ export -f bts_F
 #   or
 # * As 1st positional argument
 [ -z "${BTS_RECIPE:-}" -a $# -gt 0 ] \
-  && BTS_RECIPE="$1" && shift
+    && BTS_RECIPE="$1" && shift || :
 
 BTS_RECIPE_DEFAULT="${BTS_APP_ID}recipe"
 #
@@ -242,8 +242,8 @@ bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
 #
 # NB: OS-specific
 #
-BTS_ARCH=$(uname -m)
-BTS_ARCH_SUFFIX=
+export BTS_ARCH=$(uname -m)
+export BTS_ARCH_SUFFIX=
 [ "${BTS_ARCH}" = "x86_64" -o "${BTS_ARCH}" = "amd64" ] \
   && BTS_ARCH_SUFFIX="64" \
   || BTS_ARCH_SUFFIX=""
@@ -287,7 +287,7 @@ esac
 
 bts_init()
 {
-	BTS_ROOT=${BTS_ROOT:-$1}
+	BTS_ROOT=${BTS_ROOT:-"${1:-}"}
 	[ "${BTS_ROOT}" ] || bts_F "BTS_ROOT is not defined"
 	export BTS_ROOT
   # Default dir for built programs
