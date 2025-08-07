@@ -5,43 +5,79 @@ BTS_APP_ID=${0##*/}
 export BTS_APP_ID=${BTS_APP_ID%.*[Ss][Hh]}
 export BTS_APP_DIR="${0%/*}"
 
+#
+# Logging
+#
+# Levels
+export BTS_LOG_LEVEL_TRACE=7
+export BTS_LOG_LEVEL_DEBUG=6
+export BTS_LOG_LEVEL_VERBOSE=5
+export BTS_LOG_LEVEL_INFO=4
+export BTS_LOG_LEVEL_NOTICE=3
+export BTS_LOG_LEVEL_WARNING=2
+export BTS_LOG_LEVEL_ERROR=1
+export BTS_LOG_LEVEL_FATAL=0
+export BTS_DEFAULT_LOG_LEVEL=${BTS_LOG_LEVEL_NOTICE}
+export BTS_LOG_LEVEL=${BTS_LOG_LEVEL:-${BTS_DEFAULT_LOG_LEVEL}}
+#
+# Logging backend function
 bts_L() {
   echo -e "$(date +"%m/%d %H:%M:%S") ${BTS_APP_ID} $@"
 }
 export -f bts_L
 
+BTS_HAVE_TTY_=
+if tty >/dev/null 2>&1
+then
+    BTS_HAVE_TTY_=1
+    if NCOLORS_=$(tput colors) && [ ${NCOLORS_} -gt 2 ]
+    then
+        BTS_RESET_OUTPUT_STYLE_="\033[0m"
+        BTS_OUTPUT_STYLE_TRACE_="\033[2;90m"
+        BTS_OUTPUT_STYLE_DEBUG_="\033[1;90m"
+        BTS_OUTPUT_STYLE_VERBOSE_="\033[97m"
+        BTS_OUTPUT_STYLE_INFO_="\033[1;97m"
+        BTS_OUTPUT_STYLE_NOTICE_="\033[1;36m"
+        BTS_OUTPUT_STYLE_WARNING_="\033[0;35m"
+        BTS_OUTPUT_STYLE_ERROR_="\033[0;31m"
+        BTS_OUTPUT_STYLE_FATAL_="\033[1;41;97m"
+    fi
+fi
+
+#
+# Logging functions for severity logging
 bts_T() {
-  bts_L "\033[2;90mtrace\033[0m" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_TRACE} ] || bts_L "${BTS_OUTPUT_STYLE_TRACE_:-}trace${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_T
 
 bts_D() {
-  bts_L "\033[1;90mdebug\033[0m" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_DEBUG} ] || bts_L "${BTS_OUTPUT_STYLE_DEBUG_:-}debug${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_D
 
 bts_V() {
-  bts_L "\033[97mverb \033[0m" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_VERBOSE} ] || bts_L "${BTS_OUTPUT_STYLE_VERBOSE_:-}verb ${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_V
 
 bts_I() {
-  bts_L "\033[1;97minfo \033[0m" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_INFO} ] || bts_L "${BTS_OUTPUT_STYLE_INFO_:-}info ${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_I
 
 bts_N() {
-  bts_L "\033[1;36mnote \033[0m" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_NOTICE} ] || bts_L "${BTS_OUTPUT_STYLE_NOTICE_:-}note ${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_N
 
 bts_W() {
-  bts_L "\033[0;35mwarn \033[0m" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_WARNING} ] || bts_L "${BTS_OUTPUT_STYLE_WARNING_:=}warn ${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_W
 
 bts_E() {
-  bts_L "\033[0;31mERROR\033[0m" "$@" >&2
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_ERROR} ] || bts_L "${BTS_OUTPUT_STYLE_ERROR_:-}ERROR${BTS_RESET_OUTPUT_STYLE_:-}" "$@" >&2
 }
 export -f bts_E
 
@@ -52,7 +88,7 @@ bts_F() {
     MESSAGE_PREFIX_+="(step ${BTS_STEP_ID}) "
     BTS_STEP_ID=$(( ${BTS_STEP_ID} - 1 ))
   fi
-  bts_L "\033[1;41;97mFATAL\033[0m ${MESSAGE_PREFIX_}$@" >&2
+  bts_L "${BTS_OUTPUT_STYLE_FATAL_:-}FATAL${BTS_RESET_OUTPUT_STYLE_:-} ${MESSAGE_PREFIX_}$@" >&2
   exit ${BTS_RC}
 }
 export -f bts_F
