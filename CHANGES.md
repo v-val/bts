@@ -1,4 +1,10 @@
 # Changes
+## 2025 August 7
+Added decorative changes, such as inclusion of recipe total step count
+to the diagnostics next to id of the current step etc.
+
+Certain developer enhancements added.
+
 ## 2024 November 19
 A bunch of changes:
 * Name of file indicating success of `bts_step` changed to
