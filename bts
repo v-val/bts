@@ -249,6 +249,15 @@ then
     BTS_MODE_COUNT_STEPS_ONLY=1 \
     BTS_RECIPE="${BTS_RECIPE}" \
         bash -Eeuo pipefail -c "$0" "$@"
+    if [ -f "${BTS_STEP_COUNT_FILE}" ]
+    then
+        bts_T "${BTS_STEP_COUNT_FILE} created"
+        BTS_STEPS_TOTAL_COUNT=$(cat "${BTS_STEP_COUNT_FILE}")
+        rm -f "${BTS_STEP_COUNT_FILE}"
+        bts_D "Total step count ${BTS_STEPS_TOTAL_COUNT}"
+    else
+        bts_F "Fail to count steps in recipe"
+    fi
 fi
 if [ -f "${BTS_STEP_COUNT_FILE}" ]
 then
@@ -261,9 +270,14 @@ fi
 #
 # Real job starts here.
 #
-bts_D "Start pid=$$"
-bts_I "Job name ${BTS_JOB_NAME}"
-bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
+if [ -z "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+then
+    BTS_JOB_START_TIME_=$(bts_get_timestamp_)
+    bts_T "Job start time ${BTS_JOB_START_TIME_}"
+    bts_D "Start pid=$$"
+    bts_I "Job name ${BTS_JOB_NAME}"
+    bts_D "Recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
+fi
 #
 #
 #
@@ -935,5 +949,6 @@ bts_get()
 }
 export -f bts_get
 
-bts_I "Start"
+
+[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ] || bts_I "Start"
 source "${BTS_RECIPE}"
