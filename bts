@@ -350,7 +350,32 @@ export -f bts_os_is_EL7
 # Sets BTS_ROOT and other common vars, creates directory structure
 bts_init()
 {
-	BTS_ROOT=${BTS_ROOT:-"${1:-}"}
+    # By default we create BTS_ROOT under "/opt"
+    # that can be overridden with BTS_ROOT_PARENT
+    local BTS_ROOT_PARENT=${BTS_ROOT_PARENT:-}
+    BTS_USER_=$(id -u)
+    if [ -z "${BTS_ROOT_PARENT}" ]
+    then
+        if [ "${BTS_USER_}" = "root" ]
+        then
+            BTS_ROOT_PARENT=/opt
+        else
+            BTS_ROOT_PARENT="${HOME}/opt"
+        fi
+    fi
+    # Default BTS_ROOT name is ${BTS_JOB_NAME}[-${BTS_JOB_VERSION}]
+    # where BTS_JOB_NAME taken from recipe file name
+    # and BTS_JOB_VERSION taken from variable named "${BTS_JOB_NAME^^}_VERSION"
+    local BTS_V_JOB_VERSION=$(sed -Ee 's,\W+,_,g; s,^_+,,' <<< "${BTS_JOB_NAME^^}_VERSION")
+    eval local BTS_JOB_VERSION='${'${BTS_V_JOB_VERSION}':-}'
+    local BTS_ROOT_DEFAULT_NAME="${BTS_JOB_NAME}${BTS_JOB_VERSION:+-${BTS_JOB_VERSION}}"
+    #
+    # User may set BTS_ROOT explicitly
+	BTS_ROOT=${BTS_ROOT:-}
+    # Else user may pass BTS_ROOT as first positional parameter
+    [ -z "${BTS_ROOT}" -a $# -gt 0 ] && BTS_ROOT="$1" && shift || true
+	# Otherwise one use default
+	[ "${BTS_ROOT}" ] || BTS_ROOT="${BTS_ROOT_PARENT%%/}/${BTS_ROOT_DEFAULT_NAME}"
 	[ "${BTS_ROOT}" ] || bts_F "BTS_ROOT is not defined"
 	export BTS_ROOT
     # Default dir for built programs
