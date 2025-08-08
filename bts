@@ -110,6 +110,12 @@ bts_step_is_in_progress_() {
 }
 #export -f bts_step_is_in_progress_
 
+
+bts_get_timestamp_() {
+  date +%s%N
+}
+export -f bts_get_timestamp_
+
 #
 # Auto-set vars, affecting further behaviour
 #
@@ -118,6 +124,11 @@ bts_step_is_in_progress_() {
     && BTS_CURL_PROGRESS_FLAG_='#' \
     || BTS_CURL_PROGRESS_FLAG_='s'
 
+bts_get_duration_() {
+  [ $# -eq 2 -a ${1:-1} -gt 0 -a ${2:-1} -gt 0 ] || bts_F "\`bts_get_duration_\`: expected two positive integers, got $@"
+  perl -pe '$_ /= 100' <<< $(( ( ${2} - ${1} ) / 10000000 ))
+}
+export -f bts_get_duration_
 
 #bts_T "Trace data"
 #bts_D "Debug info"
@@ -128,6 +139,9 @@ bts_step_is_in_progress_() {
 #bts_E "Error to fix"
 #bts_F "Fatal failure"
 
+#
+# Pre-wrap initialization
+# At the moment it only checks that the recipe is provided
 #
 # Recipe file name can be passed as follows: 
 # * As BTS_RECIPE env
@@ -200,7 +214,7 @@ BTS_RECIPE_DIR=${BTS_RECIPE_DIR%%/}
 #
 # Recipe base name used for log file name
 #
-BTS_JOB_NAME=${BTS_JOB_NAME:-$(sed -Ee 's,[\._\-]?(bts[\._\-]?)?recipe$,,i' <<< "${BTS_RECIPE##*/}")}
+BTS_JOB_NAME=${BTS_JOB_NAME:-$(sed -Ee 's,[\._\-]?('"${BTS_APP_ID}"'[\._\-]?)?recipe$,,i' <<< "${BTS_RECIPE##*/}")}
 [ "${BTS_JOB_NAME}" ] || BTS_JOB_NAME=$(basename "${BTS_RECIPE%/*}")
 [ "${BTS_JOB_NAME}" ] || bts_F "Fail to determine job name, please set with BTS_JOB_NAME"
 #
@@ -250,6 +264,13 @@ fi
 bts_D "Start pid=$$"
 bts_I "Job name ${BTS_JOB_NAME}"
 bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
+#
+#
+#
+BTS_NSTEPS_PASSED_=0
+BTS_NSTEPS_FAILED_=0
+BTS_NSTEPS_SKIPPED_=0
+BTS_STEP_START_TIME_=
 
 # Doesn't work
 #exec 3>&1 4>&2
@@ -260,38 +281,44 @@ bts_D "recipe '${BTS_RECIPE}', dir '${BTS_RECIPE_DIR}'"
 # NB: OS-specific
 #
 export BTS_ARCH=$(uname -m)
-export BTS_ARCH_SUFFIX=
-[ "${BTS_ARCH}" = "x86_64" -o "${BTS_ARCH}" = "amd64" ] \
-  && BTS_ARCH_SUFFIX="64" \
-  || BTS_ARCH_SUFFIX=""
-export BTS_ARCH_SUFFIX
+export BTS_ARCH_SUFFIX=$( [[ "${BTS_ARCH}" =~ 64$ ]] && echo "64" || : )
+#
+# Name of lib dir for libraries built
+export BTS_LIB_DIR_BASE_NAME=lib
+export BTS_LIB_DIR_NAME=${BTS_LIB_DIR_BASE_NAME}${BTS_ARCH_SUFFIX}
 
 #
 # Number of CPUs
 #
-BTS_NCPUS=$(nproc)
-BTS_NJOBS_DEFAULT=$(( ${BTS_NCPUS} / 2 ))
-export BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT}}
+BTS_NCPUS_=$(nproc)
+BTS_NJOBS_DEFAULT_=$(( BTS_NCPUS_ / 2 ))
+export BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT_}}
 
 # Init routines for various platforms
 
 # NB: OS-specific
 # Runtime properties
-Platform=
+#
+# OS Class is win / unix / linux / mac / etc
+# OS Family is EL, EL etc
+BTS_OS_FAMILY=
+BTS_OS_FAMILY_EL="EL"
 Platform_EL=
-case ${OSTYPE} in
-[Mm][Ss][Yy][Ss])
-	Platform=msys
+case ${OSTYPE,,} in
+msys)
+	BTS_OS_FAMILY=msys
 	;;
-[Cc][Yy][Gg][Ww][Ii][Nn])
-	Platform=cygwin
+cygwin)
+	BTS_OS_FAMILY=cygwin
 	;;
-[Ll][Ii][Nn][Uu][Xx]*)
+linux*)
 	if [ -f "/etc/redhat-release" ]
 	then
-	    Platform="rh"
-		Platform_EL=EL$(cat /etc/redhat-release | perl -pe 's,.*?(\d).*,$1,')
-    bts_D "Detected platform ${Platform} ${Platform_EL}"
+        export BTS_OS_FAMILY=${BTS_OS_FAMILY_EL}
+        export BTS_OS_GENERATION_=$(perl -pe 's,^\D*(\d+).*,$1,' < /etc/redhat-release)
+        export BTS_OS_FAMILY_GENERATION=${BTS_OS_FAMILY}${BTS_OS_GENERATION_}
+        Platform_EL=${BTS_OS_FAMILY_GENERATION}
+        bts_D "Detected platform ${BTS_OS_FAMILY_GENERATION}"
 	else
 		bts_F "Unsupported OS family ${OSTYPE}"
 	fi
@@ -300,36 +327,65 @@ case ${OSTYPE} in
 	bts_F "Unsupported OS ${OSTYPE}"
 	;;
 esac
+#
+# Shortcut functions checking OS family and generation
+#
+bts_os_is_EL() {
+  [ ${BTS_OS_FAMILY} = ${BTS_OS_FAMILY_EL} ]
+}
+export -f bts_os_is_EL
+
+bts_os_is_EL7() {
+  bts_os_is_EL && [ ${BTS_OS_GENERATION_} = 7 ]
+}
+export -f bts_os_is_EL7
+
+bts_os_is_EL8() {
+  bts_os_is_EL && [ ${BTS_OS_GENERATION_} = 8 ]
+}
+export -f bts_os_is_EL7
 
 
+
+# Sets BTS_ROOT and other common vars, creates directory structure
 bts_init()
 {
 	BTS_ROOT=${BTS_ROOT:-"${1:-}"}
 	[ "${BTS_ROOT}" ] || bts_F "BTS_ROOT is not defined"
 	export BTS_ROOT
-  # Default dir for built programs
+    # Default dir for built programs
 	export BTS_BIN_DIR="${BTS_ROOT}/bin"
-	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -d "${BTS_BIN_DIR}" ] || mkdir -p "${BTS_BIN_DIR}"
 	# Default dir for built superuser programs
 	export BTS_SBIN_DIR="${BTS_ROOT}/sbin"
-	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -d "${BTS_SBIN_DIR}" ] || mkdir -p "${BTS_SBIN_DIR}"
 	# Default dir for built libraries
 	export BTS_LIB_DIR_NAME="lib${BTS_ARCH_SUFFIX}"
 	export BTS_LIB_DIR="${BTS_ROOT}/${BTS_LIB_DIR_NAME}"
-	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -d "${BTS_LIB_DIR}" ] || mkdir -p "${BTS_LIB_DIR}"
 	# Default dir for headers
 	export BTS_INCLUDE_DIR="${BTS_ROOT}/include"
-	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -d "${BTS_INCLUDE_DIR}" ] || mkdir -p "${BTS_INCLUDE_DIR}"
 	# Top dir for source and build dirs
 	export BTS_WORK_DIR=${BTS_WORK_DIR:-"${BTS_ROOT}/.${BTS_APP_ID}"}
-	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" -o -e "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
-	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ] || (pushd . >/dev/null 2>&1; cd "${BTS_WORK_DIR}" ; popd >/dev/null 2>&1)
+	# Create above dirs
+	if [ -z "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+	then
+	    [ -d "${BTS_BIN_DIR}" ]     || mkdir -p "${BTS_BIN_DIR}"
+	    [ -d "${BTS_SBIN_DIR}" ]    || mkdir -p "${BTS_SBIN_DIR}"
+	    [ -d "${BTS_LIB_DIR}" ]     || mkdir -p "${BTS_LIB_DIR}"
+	    [ -d "${BTS_INCLUDE_DIR}" ] || mkdir -p "${BTS_INCLUDE_DIR}"
+	    [ -e "${BTS_WORK_DIR}" ]    || mkdir -p "${BTS_WORK_DIR}"
+	    (pushd . >/dev/null 2>&1; cd "${BTS_WORK_DIR}" ; popd >/dev/null 2>&1)
+	fi
 	# Conf dir, now storing only profile
 #	export BTS_CONF_DIR="${BTS_WORK_DIR}/etc"
 #	[ -d "${BTS_CONF_DIR}" ] || mkdir -p "${BTS_CONF_DIR}"
-    # Environment vars used by builds
+    # _Exported_ environment vars for user builds
 	export BTS_PROFILE=${BTS_PROFILE:-"${BTS_ROOT}/enable"}
-	[ "${Platform}" = "rh" -a $(id -u) -ne 0 ] && BTS_SUDO="sudo "
+	# _Private_ environment vars for build of toolset
+	export BTS_PRIVATE_PROFILE="${BTS_WORK_DIR}/.profile"
+	# List of profiles loaded by bts_env
+#	export BTS_PROFILE_LIST="${BTS_PROFILE} ${BTS_PRIVATE_PROFILE}"
+    BTS_SUDO=
+	bts_os_is_EL && [ $(id -u) -ne 0 ] && BTS_SUDO="sudo " || :
+	export BTS_SUDO
 	# Directory with extras (e.g. patches)
 	export BTS_RECIPE_DIR="${BTS_RECIPE%/*}"
 	[ "${BTS_RECIPE_DIR}" ] || BTS_RECIPE_DIR="${PWD}"
@@ -342,7 +398,7 @@ BTS path:      ${BTS_WORK_DIR}
 BTS profile:   ${BTS_PROFILE}
 EOF
 	# Initialize step id
-	BTS_STEP_ID=0
+	export BTS_STEP_ID=0
 	BUILD_STEP_FILE=
 	#
 	BTS_SUDO=${BTS_SUDO:-}
@@ -353,8 +409,16 @@ EOF
     BTS_GET_DIR=
     LOCAL_REPO=
     SCHEME=
+    #
+    #  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_DEBUG} ] \
+    #    || \
+    #    env | grep ^BTS | sort
     # Inform external world  that we're not ready
-    [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ] || touch "${BTS_ROOT}/.disabled"
+    #
+    # TODO: make global constant
+    #
+    export BTS_FLAG_FILE_DISABLED="${BTS_ROOT}/.disabled"
+	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ] || touch "${BTS_FLAG_FILE_DISABLED}"
 }
 export -f bts_init
 
@@ -416,16 +480,16 @@ trap bts_end EXIT ERR
 bts_pkg()
 {
     BTS_PKG_REPORT=${BTS_PKG_REPORT:-${BTS_WORK_DIR}/.bts-pkg}
-	case "${Platform}" in
-	rh)
-        if [ "${Platform_EL}" = "EL8" ]
+	case "${BTS_OS_FAMILY}" in
+	"${BTS_OS_FAMILY_EL}")
+        if bts_os_is_EL8
         then
             ${BTS_SUDO:-} dnf -y "$@"
-        elif [ "${Platform_EL}" = "EL7" ]
+        elif bts_os_is_EL7
         then
             ${BTS_SUDO:-} yum -y "$@"
         else
-            bts_F "Unsupported platform '${Platform}' version '${Platform_EL}'"
+            bts_F "Unsupported OS family '${BTS_OS_FAMILY_GENERATION}'"
         fi
         # Log package installation
         grep -iqsF "$@" "${BTS_PKG_REPORT}" || echo "$@" >> "${BTS_PKG_REPORT}"
@@ -484,22 +548,26 @@ export -f bts_env
 
 bts_configure()
 {
-  local prefix_=${BTS_CONFIGURE_ROOT:-"${BTS_ROOT}"}
-  local libdir_=${BTS_CONFIGURE_LIBDIR:-${BTS_CONFIGURE_ROOT:+"${BTS_CONFIGURE_ROOT}/${BTS_LIB_DIR_NAME}"}}
-  [ "${libdir_}" ] || libdir_="${BTS_LIB_DIR}"
-	bts_env ${BTS_CONFIGURE_DIR:-.}/configure --prefix="${prefix_}" --libdir="${libdir_}" "$@"
+    local prefix_=${BTS_CONFIGURE_PREFIX:-"${BTS_ROOT}"}
+    local libdir_=${BTS_CONFIGURE_LIBDIR:-"${prefix_}/${BTS_LIB_DIR_NAME}"}
+    [ "${libdir_}" ] || libdir_="${BTS_LIB_DIR}"
+    bts_env "${BTS_CONFIGURE_DIR:-.}/configure" \
+            --prefix="${prefix_}" \
+            --libdir="${libdir_}" \
+            "$@"
 }
 export -f bts_configure
 
 
 bts_make()
 {
-	bts_env make -j${BTS_NJOBS} "$@"
+	bts_env "${BTS_COMMAND_MAKE:-make}" -j${BTS_NJOBS} "$@"
 }
 export -f bts_make
 
 
-BTS_DEFAULT_BUILD_TYPE="Release"
+# Should be done in `init`
+export BTS_DEFAULT_BUILD_TYPE="Release"
 bts_cmake()
 {
   local GENERATOR_="Ninja Multi-Config"
@@ -555,7 +623,7 @@ bts_step()
 {
     if [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
     then
-        BTS_STEPS_TOTAL_COUNT=$(( ${BTS_STEPS_TOTAL_COUNT} + 1 ))
+        BTS_STEPS_TOTAL_COUNT=$(( BTS_STEPS_TOTAL_COUNT + 1 ))
 #        bts_T "Counting steps: +1 = ${BTS_STEPS_TOTAL_COUNT}"
         return 1
     fi
