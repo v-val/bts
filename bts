@@ -82,14 +82,22 @@ bts_E() {
 export -f bts_E
 
 bts_F() {
-  local BTS_RC=${BTS_RC:-255}
-  local MESSAGE_PREFIX_=
-  if [ "${BTS_STEP_ID:-}" ]; then
-    MESSAGE_PREFIX_+="(step ${BTS_STEP_ID}) "
-    BTS_STEP_ID=$(( ${BTS_STEP_ID} - 1 ))
-  fi
-  bts_L "${BTS_OUTPUT_STYLE_FATAL_:-}FATAL${BTS_RESET_OUTPUT_STYLE_:-} ${MESSAGE_PREFIX_}$@" >&2
-  exit ${BTS_RC}
+    # Code returned by previous command
+    local LAST_RC=$?
+    # Code that bts will return. Can be set by caller.
+    local BTS_RC=${BTS_RC:-}
+    if [ -z "${BTS_RC}" ]
+    then
+        [ ${LAST_RC} -eq 0 ] && BTS_RC=255 || BTS_RC=${LAST_RC}
+    fi
+    local MESSAGE_PREFIX_="${BASH_SOURCE[1]##*/} L${BASH_LINENO} "
+    if [ "${BTS_STEP_ID:-}" ]; then
+        MESSAGE_PREFIX_+=" (step ${BTS_STEP_ID}) "
+        BTS_STEP_ID=$(( ${BTS_STEP_ID} - 1 ))
+    fi
+    [ ${LAST_RC} -eq 0 ] || MESSAGE_PREFIX_+=" rc ${LAST_RC}"
+    bts_L "${BTS_OUTPUT_STYLE_FATAL_:-}FATAL${BTS_RESET_OUTPUT_STYLE_:-} ${MESSAGE_PREFIX_}$@" >&2
+    exit ${BTS_RC}
 }
 export -f bts_F
 
