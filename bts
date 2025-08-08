@@ -101,6 +101,15 @@ bts_F() {
 }
 export -f bts_F
 
+
+# Return true if step entered and not finished yet
+bts_step_is_in_progress_() {
+    # Step creates BTS_STEP_STARTED_FILE upon start removes when completed successfully
+#    "${BUILD_STEP_FILE}"[ -z "${BTS_STEP_STARTED_FILE:-}" ]
+    [ "${BTS_STEP_STARTED_FILE:-}" -a -f "${BTS_STEP_STARTED_FILE:-}" ]
+}
+#export -f bts_step_is_in_progress_
+
 #
 # Auto-set vars, affecting further behaviour
 #
@@ -384,9 +393,11 @@ bts_end()
         ]
     then
         cd "${BTS_WORK_DIR}"
-        touch "${BUILD_STEP_FILE}"
         bts_clean
-        bts_dump_updated_files
+        if bts_step_is_in_progress_
+        then
+            bts_dump_updated_files
+        fi
         bts_N "Done"
     else
         bts_E "Step '${BTS_STEP_ID:--}' returned ${LAST_RC_}"
@@ -514,20 +525,28 @@ bts_cmake_build_install()
 }
 export -f bts_cmake_build_install
 
-
+#
+# Create file indicating successful completion of the step and
+# containing [sorted] list of files created or modified by the step.
+# Doesn't make sense if
 bts_dump_updated_files()
 {
-    (
-        echo "# ${BTS_STEP_TAG}"
-        [ -z "${BTS_STEP_EXTRA_FILES:-}" ] || cat<<EOF
-${BTS_STEP_EXTRA_FILES}
+    if bts_step_is_in_progress_
+    then
+        (
+            echo "# ${BTS_STEP_TAG}"
+            [ -z "${BTS_STEP_EXTRA_FILES:-}" ] || cat<<EOF
+    ${BTS_STEP_EXTRA_FILES}
 EOF
-        find "${BTS_ROOT}" -cnewer "${BTS_STEP_STARTED_FILE}" -not -type d \
-                | sed -Ee "s,^${BTS_ROOT}/*,," | sort
-    ) \
-            | bzip2 -9  > "${BUILD_STEP_FILE}"
-    BTS_STEP_EXTRA_FILES=
-    rm -f "${BTS_STEP_STARTED_FILE}"
+            find "${BTS_ROOT}" -cnewer "${BTS_STEP_STARTED_FILE}" -not -type d \
+                    | sed -Ee "s,^${BTS_ROOT}/*,," | sort
+        ) \
+                | bzip2 -9  > "${BUILD_STEP_FILE}"
+        BTS_STEP_EXTRA_FILES=
+        rm -f "${BTS_STEP_STARTED_FILE}"
+    else
+        bts_F "\`bts_dump_updated_files\` called while step is not in progress"
+    fi
 }
 export -f bts_dump_updated_files
 
@@ -551,7 +570,10 @@ bts_step()
 	if [ "${BTS_STEP_ID}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
 	then
 		bts_clean
-		bts_dump_updated_files
+		if bts_step_is_in_progress_
+		then
+		    bts_dump_updated_files
+		fi
 		bts_I "Done"
 	fi
 
