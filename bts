@@ -22,7 +22,7 @@ export BTS_LOG_LEVEL=${BTS_LOG_LEVEL:-${BTS_DEFAULT_LOG_LEVEL}}
 #
 # Logging backend function
 bts_L() {
-  echo -e "$(date +"%m/%d %H:%M:%S") ${BTS_APP_ID} $@"
+  echo -e "$(date +"%m/%d %H:%M:%S.%1N") ${BTS_APP_ID} $@"
 }
 export -f bts_L
 
