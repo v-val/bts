@@ -517,10 +517,18 @@ export -f bts_init
 #
 bts_clean()
 {
+    # File storing list of files to remove upon successful completion of the job
+    BTS_CLEAN_POSTPONED_LIST=${BTS_WORK_DIR}/.${BTS_APP_ID}.__clean-postponed__
     if [ "${BTS_CLEAN_LIST:-}" ]
     then
-        bts_T "Clean ${BTS_CLEAN_LIST}"
-        rm -rf ${BTS_CLEAN_LIST:-}
+        if [ "${BTS_CLEAN_POSTPONED:-}" ]
+        then
+            echo "${BTS_CLEAN_LIST}" >> "${BTS_CLEAN_POSTPONED_LIST}"
+            BTS_CLEAN_POSTPONED=
+        else
+            bts_T "Clean ${BTS_CLEAN_LIST}"
+            rm -rf ${BTS_CLEAN_LIST:-}
+        fi
         BTS_CLEAN_LIST=
     fi
 }
@@ -546,10 +554,20 @@ bts_end()
         ]
     then
         cd "${BTS_WORK_DIR}"
-        bts_clean
         if bts_step_is_in_progress_
         then
+            bts_clean
             bts_dump_updated_files
+        fi
+        if [ -e "${BTS_CLEAN_POSTPONED_LIST}" ]
+        then
+            if [ ${BTS_STEP_ID:-0} -eq ${BTS_STEPS_TOTAL_COUNT:-0} ]
+            then
+                bts_N "Remove temp files"
+                cat "${BTS_CLEAN_POSTPONED_LIST}" | xargs rm -rf
+            else
+                bts_N "Keep temp files - completed ${BTS_STEP_ID:-0} steps of ${BTS_STEPS_TOTAL_COUNT:-0}"
+            fi
         fi
         bts_N "Done"
     else
@@ -695,7 +713,8 @@ bts_dump_updated_files()
             [ -z "${BTS_STEP_EXTRA_FILES:-}" ] || cat<<EOF
     ${BTS_STEP_EXTRA_FILES}
 EOF
-            find "${BTS_ROOT}" -cnewer "${BTS_STEP_STARTED_FILE}" -not -type d \
+            find "${BTS_ROOT}" -cnewer "${BTS_STEP_STARTED_FILE}" \
+                    -not -type d -not -path "${BTS_WORK_DIR}/.*" \
                     | sed -Ee "s,^${BTS_ROOT}/*,," | sort
         ) \
                 | bzip2 -9  > "${BUILD_STEP_FILE}"
@@ -749,9 +768,10 @@ bts_step()
     #
 	if [ "${BTS_STEP_ID}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
 	then
-		bts_clean
+	    # Clean and update metadata only if the step was doing something
 		if bts_step_is_in_progress_
 		then
+		    bts_clean
 		    bts_dump_updated_files
 		fi
 		bts_I "Done"
