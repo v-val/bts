@@ -294,7 +294,7 @@ then
 fi
 #
 #
-#
+# Counters of processed steps by status
 BTS_NSTEPS_PASSED_=0
 BTS_NSTEPS_FAILED_=0
 BTS_NSTEPS_SKIPPED_=0
@@ -373,6 +373,40 @@ bts_os_is_EL8() {
 }
 export -f bts_os_is_EL7
 
+#
+# Next 2 functions merged from .2 without clear intention to use
+#
+if false
+then
+#
+# `bts_required_version` declares required version and verifies
+# that actual version is ok
+bts_required_version()
+{
+  [ $# -eq 1 ] || bts_F '`bts_required_version`: exactly one positional argument expected'
+  local user_required_version_="$1"
+  # User required BTS version must be less or equal to current BTS version
+  [ "${user_required_version_}" \< "${BTS_VERSION}" -o "${user_required_version_}" = "${BTS_VERSION}" ] \
+    || \
+    bts_F "Recipe needs BTS v${user_required_version_} or later"
+}
+export -f bts_required_version
+
+#
+#
+#
+bts_compiler_get_version()
+{
+    [ $# -ne 0 ] || bts_F '`bts_compiler_get_version`: one positional argument required'
+    perl -pe 's,^\s*([a-z]+)\D+(\d+(\.\d+)*).*,$1 $2,i' <<< $("${1}" --version | head -1)
+}
+export -f bts_compiler_get_version
+fi
+
+#
+# Initialize current step number to empty
+#
+BTS_STEP_ID=${BTS_STEP_ID:-}
 
 
 # Sets BTS_ROOT and other common vars, creates directory structure
@@ -443,19 +477,21 @@ bts_init()
 	export BTS_RECIPE_DIR="${BTS_RECIPE%/*}"
 	[ "${BTS_RECIPE_DIR}" ] || BTS_RECIPE_DIR="${PWD}"
 cat<<EOF >&2
-Toolchain tree defined:
-Prefix:        ${BTS_ROOT}
-Library path:  ${BTS_LIB_DIR}
-Includes path: ${BTS_INCLUDE_DIR}
-BTS path:      ${BTS_WORK_DIR}
-BTS profile:   ${BTS_PROFILE}
+BTS tree defined:
+Prefix:         ${BTS_ROOT}
+Libraries:      ${BTS_LIB_DIR}
+Includes:       ${BTS_INCLUDE_DIR}
+Work dir:       ${BTS_WORK_DIR}
+Enabler script: ${BTS_PROFILE}
 EOF
-	# Initialize step id
+	# [Re]set step id to initial value
 	export BTS_STEP_ID=0
 	BUILD_STEP_FILE=
 	#
 	BTS_SUDO=${BTS_SUDO:-}
 	export BTS_CMAKE_PREFIX_PATH=${BTS_CMAKE_PREFIX_PATH:-}
+	#
+	# These vars are used by download / extract helpers
 	#
 	TAG=
     ARCHIEVED_DIR=
@@ -499,7 +535,7 @@ bts_end()
         echo ${BTS_STEPS_TOTAL_COUNT} > "${BTS_STEP_COUNT_FILE}"
         return ${LAST_RC_}
     fi
-    bts_D "
+    bts_T "Finished with:
     LAST_RC_    ${LAST_RC_}
     BTS_STEP_ID ${BTS_STEP_ID:-}
     BUILD_STEP_FILE ${BUILD_STEP_FILE:-}
@@ -583,6 +619,7 @@ bts_env()
 {
 	(
 #	    [ -z "${BTS_ENV_SET_X_:-}" ] || set -x
+        [ "${BTS_ENV_PUBLIC:-}" -o ! -f "${BTS_PRIVATE_PROFILE}" ] || source "${BTS_PRIVATE_PROFILE}"
         [ ! -f "${BTS_PROFILE}" ] || source "${BTS_PROFILE}"
         [ -z "${BTS_ENV_SHOW_FLAGS:-}" ] || env | egrep '^\w*(PATH|FLAGS)\w*' | sort
         command "$@"
@@ -623,10 +660,9 @@ export -f bts_make
 export BTS_DEFAULT_BUILD_TYPE="Release"
 bts_cmake()
 {
-  local GENERATOR_="Ninja Multi-Config"
-  local DASH_G_
-  DASH_G_=-G"${GENERATOR_}"
-  bts_N "Use '${GENERATOR_}'"
+  local GENERATOR_=${BTS_CMAKE_GENERATOR_:-"Ninja Multi-Config"}
+  local DASH_G_=-G"${GENERATOR_}"
+  bts_V "Use '${GENERATOR_}'"
 #  bts_D "Command: cmake -G\"${GENERATOR_}\" -DCMAKE_INSTALL_PREFIX=\"${BTS_ROOT}\" -DCMAKE_PREFIX_PATH=\"${BTS_ROOT};${BTS_CMAKE_PREFIX_PATH}\" \"$@\""
   BTS_PROFILE="${BTS_PROFILE}" \
 	bts_env cmake \
@@ -670,6 +706,29 @@ EOF
     fi
 }
 export -f bts_dump_updated_files
+
+
+bts_step_make_id_() {
+    [ $# -gt 0 ] || bts_F "\`bts_step_make_id_\`: mandatory argument(s) missing"
+    perl -pe '
+        s,^\s*(install|create)\b\W*,,i ;
+        s,[^\w\.]+,-,g ;
+        s,^\-|\-$,,g ;
+        $_ = lc ;
+        ' <<< "$@"
+}
+export -f bts_step_make_id_
+
+
+bts_step_make_flag_file_name_() {
+    [ $# -gt 0 ] || bts_F "\`bts_step_make_flag_file_name_\`: mandatory argument(s) missing"
+    local r_=
+    for name_ in "$@"; do
+        r_+=${r_:+" "}"${BTS_WORK_DIR}/.${BTS_APP_ID}."$(bts_step_make_id_ "${name_}")
+        done
+    echo "${r_}"
+}
+export -f bts_step_make_flag_file_name_
 
 
 bts_step()
