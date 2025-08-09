@@ -240,6 +240,7 @@ fi
 #
 # Count steps
 #
+BTS_MODE_COUNT_STEPS_ONLY=${BTS_MODE_COUNT_STEPS_ONLY:-}
 BTS_STEPS_TOTAL_COUNT=0
 BTS_STEP_COUNT_FILE=".${BTS_APP_ID}.${BTS_JOB_NAME}-step-count"
 if [ -z "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
@@ -266,11 +267,24 @@ then
     bts_D "Total step count ${BTS_STEPS_TOTAL_COUNT}"
 fi
 
+#
+# Return success when is running in "production" mode or failure otherwise
+# It depends on BTS_MODE_COUNT_STEPS_ONLY only at the moment
+bts_is_in_idle_mode(){
+    [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+}
+export -f bts_is_in_idle_mode
+
+bts_is_in_work_mode() {
+    ! bts_is_in_idle_mode
+}
+export -f bts_is_in_work_mode
+
 ################################################################
 #
 # Real job starts here.
 #
-if [ -z "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+if bts_is_in_work_mode
 then
     BTS_JOB_START_TIME_=$(bts_get_timestamp_)
     bts_T "Job start time ${BTS_JOB_START_TIME_}"
@@ -404,7 +418,7 @@ bts_init()
 	# Top dir for source and build dirs
 	export BTS_WORK_DIR=${BTS_WORK_DIR:-"${BTS_ROOT}/.${BTS_APP_ID}"}
 	# Create above dirs
-	if [ -z "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+	if bts_is_in_work_mode
 	then
 	    [ -d "${BTS_BIN_DIR}" ]     || mkdir -p "${BTS_BIN_DIR}"
 	    [ -d "${BTS_SBIN_DIR}" ]    || mkdir -p "${BTS_SBIN_DIR}"
@@ -457,7 +471,7 @@ EOF
     # TODO: make global constant
     #
     export BTS_FLAG_FILE_DISABLED="${BTS_ROOT}/.disabled"
-	[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ] || touch "${BTS_FLAG_FILE_DISABLED}"
+	bts_is_in_idle_mode || touch "${BTS_FLAG_FILE_DISABLED}"
 }
 export -f bts_init
 
@@ -950,5 +964,5 @@ bts_get()
 export -f bts_get
 
 
-[ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ] || bts_I "Start"
+bts_is_in_idle_mode || bts_I "Start"
 source "${BTS_RECIPE}"
