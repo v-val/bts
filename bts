@@ -560,7 +560,7 @@ bts_end()
             bts_clean
             bts_dump_updated_files
         fi
-        if [ -e "${BTS_CLEAN_POSTPONED_LIST}" ]
+        if [ "${BTS_CLEAN_POSTPONED_LIST:-}" -a -e "${BTS_CLEAN_POSTPONED_LIST:-}" ]
         then
             if [ ${BTS_STEP_ID:-0} -eq ${BTS_STEPS_TOTAL_COUNT:-0} ]
             then
