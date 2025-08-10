@@ -52,7 +52,7 @@ bts_T() {
 export -f bts_T
 
 bts_D() {
-  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_DEBUG} ] || bts_L "${BTS_OUTPUT_STYLE_DEBUG_:-}debug${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
+    [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_DEBUG} ] || bts_L "${BTS_OUTPUT_STYLE_DEBUG_:-}debug${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_D
 
@@ -120,9 +120,11 @@ export -f bts_get_timestamp_
 # Auto-set vars, affecting further behaviour
 #
 # Curl progress flags: '#' if there's tty and '-s' otherwise
-[ "${BTS_HAVE_TTY_}" ] \
-    && BTS_CURL_PROGRESS_FLAG_='#' \
-    || BTS_CURL_PROGRESS_FLAG_='s'
+#[ "${BTS_HAVE_TTY_}" ] \
+#    && BTS_CURL_PROGRESS_FLAG_='#' \
+#    || BTS_CURL_PROGRESS_FLAG_='s'
+# Just suppress any progress output
+BTS_CURL_PROGRESS_FLAG_='s'
 
 bts_get_duration_() {
   [ $# -eq 2 -a ${1:-1} -gt 0 -a ${2:-1} -gt 0 ] || bts_F "\`bts_get_duration_\`: expected two positive integers, got $@"
@@ -510,7 +512,6 @@ EOF
 	bts_is_in_idle_mode || touch "${BTS_FLAG_FILE_DISABLED}"
 }
 export -f bts_init
-
 
 #
 # Remove [blank-separated] paths from BTS_CLEAN_LIST
