@@ -32,3 +32,17 @@ For the moment please contact me if need help in using BTS or just submit a tick
 * perl
 * tee
 
+## Trivial example
+```bash
+cat<<EOF | BTS_ROOT=/dev/shm/bts-dummy bts /dev/stdin
+
+bts_init
+
+while bts_step "Hello world"
+do
+    echo "HELLO, WORLD"
+done
+
+EOF
+```
+
