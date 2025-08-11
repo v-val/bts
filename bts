@@ -92,8 +92,13 @@ bts_F() {
     fi
     local MESSAGE_PREFIX_="${BASH_SOURCE[1]##*/} L${BASH_LINENO} "
     if [ "${BTS_STEP_ID:-}" ]; then
-        MESSAGE_PREFIX_+=" (step ${BTS_STEP_ID}) "
-        BTS_STEP_ID=$(( ${BTS_STEP_ID} - 1 ))
+        if bts_step_is_in_progress_
+        then
+            MESSAGE_PREFIX_+="in "
+        else
+            MESSAGE_PREFIX_+="after "
+        fi
+        MESSAGE_PREFIX_+="step ${BTS_STEP_ID}"
     fi
     [ ${LAST_RC} -eq 0 ] || MESSAGE_PREFIX_+=" rc ${LAST_RC}"
     bts_L "${BTS_OUTPUT_STYLE_FATAL_:-}FATAL${BTS_RESET_OUTPUT_STYLE_:-} ${MESSAGE_PREFIX_}$@" >&2
