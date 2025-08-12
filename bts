@@ -41,6 +41,8 @@ then
         BTS_OUTPUT_STYLE_WARNING_="\033[0;35m"
         BTS_OUTPUT_STYLE_ERROR_="\033[0;31m"
         BTS_OUTPUT_STYLE_FATAL_="\033[1;41;97m"
+        BTS_COLOR_PRIMARY_="\033[94m"
+        BTS_COLOR_OK_="\033[92m"
     fi
 fi
 
@@ -107,14 +109,38 @@ bts_F() {
 export -f bts_F
 
 
+bts_text_primary() {
+    echo -ne "${BTS_COLOR_PRIMARY_:-}$@${BTS_RESET_OUTPUT_STYLE_:-}"
+}
+export -f bts_text_primary
+
+
+bts_text_ok() {
+    echo -ne "${BTS_COLOR_OK_:-}$@${BTS_RESET_OUTPUT_STYLE_:-}"
+}
+export -f bts_text_primary
+
+
 # Return true if step entered and not finished yet
 bts_step_is_in_progress_() {
     # Step creates BTS_STEP_STARTED_FILE upon start removes when completed successfully
+#    bts_T "BTS_STEP_STARTED_FILE ${BTS_STEP_STARTED_FILE:-}: "${BTS_STEP_STARTED_FILE:+$(ls -lA "${BTS_STEP_STARTED_FILE:-}")}
+#    bts_T "BUILD_STEP_FILE ${BUILD_STEP_FILE:-}: "${BUILD_STEP_FILE:+$(ls -lA "${BUILD_STEP_FILE:-}")}
 #    "${BUILD_STEP_FILE}"[ -z "${BTS_STEP_STARTED_FILE:-}" ]
-    [ "${BTS_STEP_STARTED_FILE:-}" -a -f "${BTS_STEP_STARTED_FILE:-}" ]
+    [ "${BTS_STEP_ID:-}" -a "${BTS_STEP_ID:-0}" -gt 0 ] \
+            && \
+            [ "${BTS_STEP_STARTED_FILE:-}" -a -f "${BTS_STEP_STARTED_FILE:-}" ] \
+            && \
+            [ -z "${BUILD_STEP_FILE:-}" -o ! -f "${BUILD_STEP_FILE:-}" ]
 }
-#export -f bts_step_is_in_progress_
+export -f bts_step_is_in_progress_
 
+# Check whether step was successfully completed
+# Return true if step was entered and successfully completed once ; false otherwise
+bts_step_is_done_() {
+    [ "${BUILD_STEP_FILE:-}" ] || bts_F "\`bts_step_is_done_\`: required var. BUILD_STEP_FILE unset"
+    [ "${BTS_STEP_ID:-0}" -a "${BTS_STEP_ID:-0}" -gt 0 -a -f "${BUILD_STEP_FILE}" ]
+}
 
 bts_get_timestamp_() {
   date +%s%N
@@ -131,8 +157,11 @@ export -f bts_get_timestamp_
 # Just suppress any progress output
 BTS_CURL_PROGRESS_FLAG_='s'
 
+#
+# Take 2 timestamps (nsecs), return difference as floating number of msecs
+#
 bts_get_duration_() {
-  [ $# -eq 2 -a ${1:-1} -gt 0 -a ${2:-1} -gt 0 ] || bts_F "\`bts_get_duration_\`: expected two positive integers, got $@"
+  [ $# -eq 2 -a ${1:-0} -gt 0 -a ${2:-0} -gt 0 ] || bts_F "\`bts_get_duration_\`: expected two positive integers, got $@"
   perl -pe '$_ /= 100' <<< $(( ( ${2} - ${1} ) / 10000000 ))
 }
 export -f bts_get_duration_
@@ -302,10 +331,7 @@ fi
 #
 #
 # Counters of processed steps by status
-BTS_NSTEPS_PASSED_=0
 BTS_NSTEPS_FAILED_=0
-BTS_NSTEPS_SKIPPED_=0
-BTS_STEP_START_TIME_=
 
 # Doesn't work
 #exec 3>&1 4>&2
@@ -410,11 +436,6 @@ bts_compiler_get_version()
 export -f bts_compiler_get_version
 fi
 
-#
-# Initialize current step number to empty
-#
-BTS_STEP_ID=${BTS_STEP_ID:-}
-
 
 # Sets BTS_ROOT and other common vars, creates directory structure
 bts_init()
@@ -425,7 +446,7 @@ bts_init()
     BTS_USER_=$(id -u)
     if [ -z "${BTS_ROOT_PARENT}" ]
     then
-        if [ "${BTS_USER_}" = "root" ]
+        if [ ${BTS_USER_} -eq 0 ]
         then
             BTS_ROOT_PARENT=/opt
         else
@@ -491,9 +512,7 @@ Includes:       ${BTS_INCLUDE_DIR}
 Work dir:       ${BTS_WORK_DIR}
 Enabler script: ${BTS_PROFILE}
 EOF
-	# [Re]set step id to initial value
-	export BTS_STEP_ID=0
-	BUILD_STEP_FILE=
+
 	#
 	BTS_SUDO=${BTS_SUDO:-}
 	export BTS_CMAKE_PREFIX_PATH=${BTS_CMAKE_PREFIX_PATH:-}
@@ -544,6 +563,9 @@ export -f bts_clean
 bts_end()
 {
     local LAST_RC_=$?
+    #
+    # If ones counts steps only, output the count to the file and exit.
+    #
     if [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
     then
         echo ${BTS_STEPS_TOTAL_COUNT} > "${BTS_STEP_COUNT_FILE}"
@@ -581,7 +603,7 @@ bts_end()
     fi
     if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
     then
-        rm -f "${BTS_ROOT}/.disabled"
+        rm -vf "${BTS_FLAG_FILE_DISABLED}"
         date +%s > "${BTS_ROOT}/.updated"
     fi
     return ${LAST_RC_}
@@ -758,52 +780,66 @@ export -f bts_step_make_flag_file_name_
 
 bts_step()
 {
+    # If is running in "count steps only" mode then
+    # one only increment total counter and return
     if [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
     then
         BTS_STEPS_TOTAL_COUNT=$(( BTS_STEPS_TOTAL_COUNT + 1 ))
-#        bts_T "Counting steps: +1 = ${BTS_STEPS_TOTAL_COUNT}"
         return 1
     fi
 
+    # Check usage
+    [ $# -gt 0 ] || bts_F "\`bts_step\`: mandatory argument(s) missing"
+    #
+    # Scope name is global to enable use in `bts_F
+    export BTS_SCOPE_NAME_="$@"
+
+    # Ensure that work dir exists
 	[ -d "${BTS_WORK_DIR}" ] || mkdir -p "${BTS_WORK_DIR}"
 	cd "${BTS_WORK_DIR}"
-#	echo "  * Changed to ${PWD}"
 
-    #
-    # Set previous step as done
-    #
-	if [ "${BTS_STEP_ID}" -gt 0 -a ! -f "${BUILD_STEP_FILE}" ]
-	then
-	    # Clean and update metadata only if the step was doing something
-		if bts_step_is_in_progress_
-		then
-		    bts_clean
-		    bts_dump_updated_files
-		fi
-		bts_I "Done"
-	fi
-
-	BTS_STEP_ID=$(( ${BTS_STEP_ID} + 1 ))
-	local BUILD_STEP_DESC_=${BTS_STEP_DESC:-"$1"}
-	[ "${BUILD_STEP_DESC_}" ] || bts_F "Required BTS_STEP_DESC missing!"
-
+	# ID identifies current scope with file system entries
     BTS_STEP_TAG=$(
 	        perl -pe '
 	            s,^\s*(install|create)\b\W*,,i ;
 	            s,[^\w\.]+,-,gi; s,^\-|\-$,,g ;
 	            $_ = lc ;
 	            ' \
-	            <<< "${BUILD_STEP_DESC_}"
+	            <<< "${BTS_SCOPE_NAME_}"
 	        )
 	bts_T "step tag ${BTS_STEP_TAG}"
 	BUILD_STEP_FILE=".${BTS_APP_ID}.${BTS_STEP_TAG}"
+#	echo "  * Changed to ${PWD}"
 
-	bts_N "${BTS_STEP_ID} of ${BTS_STEPS_TOTAL_COUNT}: ${BUILD_STEP_DESC_}"
-	if [ -f "${BUILD_STEP_FILE}" ]
+	if bts_step_is_done_
 	then
-		bts_I "Skip [already done]"
+	    # Nothing to do
+	    bts_N "${BTS_STEP_ID} of ${BTS_STEPS_TOTAL_COUNT}: ${BTS_SCOPE_NAME_} - $(bts_text_primary Done) [previously]"
+#	    bts_I "Skip [already done]"
+	    BTS_STEP_START_TIME_=
+	    BTS_NSTEPS_SKIPPED_=$(( ${BTS_NSTEPS_SKIPPED_:-0} + 1 ))
+	    BTS_STEP_ID=$(( ${BTS_STEP_ID:-0} + 1 ))
+	    BTS_STEP_STARTED_FILE=
+	    return 1
+	elif bts_step_is_in_progress_
+    then
+        # Set step as done
+        bts_clean
+        local BTS_STEP_FINISH_TIME_=$(bts_get_timestamp_)
+#        bts_W "BTS_STEP_START_TIME_ '${BTS_STEP_START_TIME_}' BTS_STEP_FINISH_TIME_ '${BTS_STEP_FINISH_TIME_}'"
+        local BTS_STEP_DURATION_=$(bts_get_duration_ ${BTS_STEP_START_TIME_} ${BTS_STEP_FINISH_TIME_})
+        bts_dump_updated_files
+		bts_I "$(bts_text_ok Done) in ${BTS_STEP_DURATION_} s"
+		BTS_NSTEPS_PASSED_=$(( ${BTS_NSTEPS_PASSED_:-0} + 1 ))
+		BTS_STEP_STARTED_FILE=
 		return 1
 	fi
+
+    # Actual step starts here
+    # so does initialization of step-related variables
+    BTS_STEP_ID=$(( ${BTS_STEP_ID:-0} + 1 ))
+    BTS_STEP_START_TIME_=$(bts_get_timestamp_)
+	bts_N "${BTS_STEP_ID} of ${BTS_STEPS_TOTAL_COUNT}: ${BTS_SCOPE_NAME_}"
 
 	TAG=
 	ARCHIEVED_DIR=
