@@ -563,6 +563,8 @@ export -f bts_clean
 bts_end()
 {
     local LAST_RC_=$?
+    BTS_END_CALL_COUNT_=${BTS_END_CALL_COUNT_:-0}
+    export BTS_END_CALL_COUNT_=$(( BTS_END_CALL_COUNT_ + 1 ))
     #
     # If ones counts steps only, output the count to the file and exit.
     #
@@ -581,6 +583,9 @@ bts_end()
     #
     if [ ${LAST_RC_} -eq 0 ] && bts_step_is_done_
     then
+        #
+        # Recipe was processed without errors
+        #
         cd "${BTS_WORK_DIR}"
         if [ "${BTS_CLEAN_POSTPONED_LIST:-}" -a -e "${BTS_CLEAN_POSTPONED_LIST:-}" ]
         then
@@ -594,18 +599,39 @@ bts_end()
         fi
         local BTS_JOB_END_TIME_=$(bts_get_timestamp_)
         local BTS_JOB_DURATION_=$(bts_get_duration_ ${BTS_JOB_START_TIME_} ${BTS_JOB_END_TIME_})
+        bts_T "BTS_END_CALL_COUNT_ ${BTS_END_CALL_COUNT_}"
         bts_N "$(bts_text_ok Done) $((${BTS_STEP_ID}-1)) of ${BTS_STEPS_TOTAL_COUNT} steps in ${BTS_JOB_DURATION_} s"
-    else
+    elif bts_step_is_in_progress_
+    then
+        #
+        # Failure in one of steps
+        #
         BTS_STEP_FINISH_TIME_=$(bts_get_timestamp_)
         local BTS_STEP_DURATION_=$(bts_get_duration_ ${BTS_STEP_START_TIME_} ${BTS_STEP_FINISH_TIME_})
         local BTS_JOB_END_TIME_=${BTS_STEP_FINISH_TIME_}
         local BTS_JOB_DURATION_=$(bts_get_duration_ ${BTS_JOB_START_TIME_} ${BTS_JOB_END_TIME_})
-        bts_E "Step ${BTS_STEP_ID:--} of ${BTS_STEPS_TOTAL_COUNT} returned ${LAST_RC_} in ${BTS_STEP_DURATION_} s"
+        BTS_NSTEPS_FAILED_=$(( ${BTS_NSTEPS_FAILED_} + 1 ))
+        bts_T "BTS_END_CALL_COUNT_ ${BTS_END_CALL_COUNT_}"
+        ALERT_MESSAGE_="Step ${BTS_STEP_ID:-'N/A'} of ${BTS_STEPS_TOTAL_COUNT} \"${BTS_SCOPE_NAME_:-}\" returned ${LAST_RC_} in ${BTS_JOB_DURATION_}"
+        bts_E "${ALERT_MESSAGE_}"
+    else
+        #
+        # Failure out of steps scopes
+        #
+        BTS_STEP_FINISH_TIME_=$(bts_get_timestamp_)
+        local BTS_STEP_DURATION_=$(bts_get_duration_ ${BTS_STEP_START_TIME_} ${BTS_STEP_FINISH_TIME_})
+        local BTS_JOB_END_TIME_=${BTS_STEP_FINISH_TIME_}
+        local BTS_JOB_DURATION_=$(bts_get_duration_ ${BTS_JOB_START_TIME_} ${BTS_JOB_END_TIME_})
+        bts_T "BTS_END_CALL_COUNT_ ${BTS_END_CALL_COUNT_}"
+        bts_E "Step ${BTS_STEP_ID:-'N/A'} of ${BTS_STEPS_TOTAL_COUNT} \"${BTS_SCOPE_NAME_:-}\" returned ${LAST_RC_} in ${BTS_STEP_DURATION_} s"
     fi
+    #
+    # TODO: Send alert to external system
+    #
     if [ "${BTS_ROOT:-}" -a -e "${BTS_ROOT:-}" ]
     then
         rm -vf "${BTS_FLAG_FILE_DISABLED}"
-        date +%s > "${BTS_ROOT}/.updated"
+        echo "${BTS_JOB_END_TIME_} ${BTS_JOB_DURATION_}" > "${BTS_ROOT}/.updated"
     fi
     return ${LAST_RC_}
 }
