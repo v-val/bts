@@ -635,6 +635,9 @@ bts_end()
     fi
     return ${LAST_RC_}
 }
+#
+# TODO: separate handlers
+#
 trap bts_end EXIT ERR
 
 
@@ -1047,7 +1050,7 @@ bts_get()
             extract_fn_="bts_unzip"
             dir=$(sed -Ee 's,\.zip$,,i' <<< "${file}")
         else
-			bts_T "get '${file}' doesn't look as archive, fetch without extracting"
+			bts_D "\`get\` '${file}' doesn't look as archive, fetch without extracting"
 		fi
         # Archived directory can be overridden
         [ "${ARCHIEVED_DIR:-}" ] && dir="${ARCHIEVED_DIR}" || :
@@ -1057,7 +1060,7 @@ bts_get()
             local LOCAL_COPY_="${BTS_GET_BACKUP_DIR}/${file}"
             if [ -e "${LOCAL_COPY_}" ]
             then
-                bts_D "Use local copy from \"${BTS_GET_BACKUP_DIR:-}\""
+                bts_D "\`get\` use local copy from \"${BTS_GET_BACKUP_DIR:-}\""
                 curl -${BTS_CURL_PROGRESS_FLAG_}O file://"${LOCAL_COPY_}"
             fi
         fi
@@ -1095,11 +1098,15 @@ bts_get()
         #
         if [ "${BTS_NOCD:-}" ]
         then
-            bts_T "get not changing to extracted directory: BTS_NOCD=${BTS_NOCD}"
-        elif [ "${BTS_EXTRACT_DIR}" -a -d "${BTS_EXTRACT_DIR}" ]
+            bts_T "\`get\` not changing to extracted directory: BTS_NOCD=${BTS_NOCD}"
+        elif [ "${BTS_GET_TOP_DIR:-}" ]
+        then
+            cd "${BTS_GET_TOP_DIR}"
+            bts_D "\`get\` to BTS_GET_TOP_DIR ${PWD}"
+        elif [ "${BTS_EXTRACT_DIR:-}" -a -d "${BTS_EXTRACT_DIR}" ]
         then
             cd "${BTS_EXTRACT_DIR}"
-	        bts_D "Changed to extracted directory ${PWD}"
+	        bts_D "\`get\` to BTS_EXTRACT_DIR ${PWD}"
         elif [ "${dir:-}" -a -d "${dir:-}" ]
         then
             cd "${dir}"
