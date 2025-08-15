@@ -971,6 +971,8 @@ export -f bts_fetch
 
 bts_get()
 {
+    [ "${BTS_STEP_TAG:-}" ] || bts_F "\`bts_get\` called out of step context"
+    local DOWNLOAD_DIR=${BTS_DOWNLOAD_DIR:-"${BTS_WORK_DIR}/.${BTS_APP_ID}._download"}/"${BTS_STEP_TAG}"
 	local url="$1"
 	shift
 	bts_T "get ${url}"
