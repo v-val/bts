@@ -519,7 +519,7 @@ bts_init()
 	# Directory with extras (e.g. patches)
 	export BTS_RECIPE_DIR="${BTS_RECIPE%/*}"
 	[ "${BTS_RECIPE_DIR}" ] || BTS_RECIPE_DIR="${PWD}"
-cat<<EOF >&2
+    bts_is_in_idle_mode || cat<<EOF >&2
 BTS tree defined:
 Prefix:         ${BTS_ROOT}
 Libraries:      ${BTS_LIB_DIR}
