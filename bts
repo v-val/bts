@@ -644,20 +644,28 @@ trap bts_end EXIT ERR
 # NB: OS-specific
 bts_pkg()
 {
-    BTS_PKG_REPORT=${BTS_PKG_REPORT:-${BTS_WORK_DIR}/.bts-pkg}
+    BTS_PKG_REPORT=${BTS_PKG_REPORT:-${BTS_WORK_DIR}/.${BTS_APP_ID}._pkg}
 	case "${BTS_OS_FAMILY}" in
 	"${BTS_OS_FAMILY_EL}")
         if bts_os_is_EL8
         then
+            bts_T "\`bts_pkg\` command: ${BTS_SUDO:-} dnf -y \"$@\""
             ${BTS_SUDO:-} dnf -y "$@"
         elif bts_os_is_EL7
         then
+            bts_T "\`bts_pkg\` command: ${BTS_SUDO:-} yum -y \"$@\""
             ${BTS_SUDO:-} yum -y "$@"
         else
             bts_F "Unsupported OS family '${BTS_OS_FAMILY_GENERATION}'"
         fi
         # Log package installation
-        grep -iqsF "$@" "${BTS_PKG_REPORT}" || echo "$@" >> "${BTS_PKG_REPORT}"
+        if grep -iqsF "$@" "${BTS_PKG_REPORT}"
+        then
+            bts_T "\`bts_pkg\` record for \"$@\" exists already"
+        else
+            echo "$@" >> "${BTS_PKG_REPORT}"
+            bts_T "\`bts_pkg\` recorded \"$@\""
+        fi
         ;;
     cygwin)
         if ! command -v apt-cyg >/dev/null 2>&1
