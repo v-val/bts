@@ -20,9 +20,12 @@ export BTS_LOG_LEVEL_FATAL=0
 export BTS_DEFAULT_LOG_LEVEL=${BTS_LOG_LEVEL_NOTICE}
 export BTS_LOG_LEVEL=${BTS_LOG_LEVEL:-${BTS_DEFAULT_LOG_LEVEL}}
 #
+# Format for absolute datetimes
+BTS_DATETIME_FORMAT_='%m/%d %H:%M:%S'
+#
 # Logging backend function
 bts_L() {
-  echo -e "$(date +"%m/%d %H:%M:%S.%1N") ${BTS_APP_ID} $@"
+  echo -e "$(date +"${BTS_DATETIME_FORMAT_}.%1N") ${BTS_APP_ID} $@"
 }
 export -f bts_L
 
@@ -146,6 +149,18 @@ bts_get_timestamp_() {
   date +%s%N
 }
 export -f bts_get_timestamp_
+
+
+bts_format_timestamp_() {
+    [ $# -gt 0 ] || bts_F "\`bts_format_timestamp_\` called with no parameters"
+    local TIMESTAMP_="$@"
+    local SECONDS_=${TIMESTAMP_%?????????}
+    local SUBSECONDS_=${TIMESTAMP_: -9}
+    local FORMAT_=${BTS_DATETIME_FORMAT:-"${BTS_DATETIME_FORMAT_}.${SUBSECONDS_}"}
+    date +"${FORMAT_}" -d"@${SECONDS_}"
+}
+export -f bts_format_timestamp_
+
 
 #
 # Auto-set vars, affecting further behaviour
