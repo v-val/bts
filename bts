@@ -558,7 +558,7 @@ export -f bts_init
 bts_clean()
 {
     # File storing list of files to remove upon successful completion of the job
-    BTS_CLEAN_POSTPONED_LIST=${BTS_WORK_DIR}/.${BTS_APP_ID}.__clean-postponed__
+    BTS_CLEAN_POSTPONED_LIST=${BTS_WORK_DIR}/.${BTS_APP_ID}._clean-postponed
     if [ "${BTS_CLEAN_LIST:-}" ]
     then
         if [ "${BTS_CLEAN_POSTPONED:-}" ]
