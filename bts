@@ -106,7 +106,9 @@ bts_F() {
         MESSAGE_PREFIX_+="step ${BTS_STEP_ID}"
     fi
     [ ${LAST_RC} -eq 0 ] || MESSAGE_PREFIX_+=" rc ${LAST_RC}"
-    bts_L "${BTS_OUTPUT_STYLE_FATAL_:-}FATAL${BTS_RESET_OUTPUT_STYLE_:-} ${MESSAGE_PREFIX_}$@" >&2
+    [ "${MESSAGE_PREFIX_}" ] && MESSAGE_PREFIX_="
+    ${MESSAGE_PREFIX_}"
+    bts_L "${BTS_OUTPUT_STYLE_FATAL_:-}FATAL${BTS_RESET_OUTPUT_STYLE_:-} ${MESSAGE_PREFIX_} $@" >&2
     exit ${BTS_RC}
 }
 export -f bts_F
@@ -394,7 +396,7 @@ linux*)
         export BTS_OS_GENERATION_=$(perl -pe 's,^\D*(\d+).*,$1,' < /etc/redhat-release)
         export BTS_OS_FAMILY_GENERATION=${BTS_OS_FAMILY}${BTS_OS_GENERATION_}
         Platform_EL=${BTS_OS_FAMILY_GENERATION}
-        bts_D "Detected platform ${BTS_OS_FAMILY_GENERATION}"
+        bts_T "Detected platform ${BTS_OS_FAMILY_GENERATION}"
 	else
 		bts_F "Unsupported OS family ${OSTYPE}"
 	fi
@@ -1005,9 +1007,12 @@ bts_get()
 	[ -d "${BTS_GET_CURRENT_DOWNLOAD_DIR}" ] || mkdir -p "${BTS_GET_CURRENT_DOWNLOAD_DIR}"
 	pushd . >/dev/null 2>&1
 	cd "${BTS_GET_CURRENT_DOWNLOAD_DIR}"
-	bts_T "get in '${PWD}'"
+	bts_T "\`get\` in '${PWD}'"
 	[ "${BTS_NO_CLEAN:-}" ] || BTS_CLEAN_LIST=${BTS_CLEAN_LIST:+"${BTS_CLEAN_LIST} "}"${PWD}"
 
+    #
+    # Clone or download to current directory DOWNLOAD_DIR
+    #
     # TODO: rework
 	if [ "${SCHEME}" = "git" ] || egrep -iqs '\.(git)$' <<< "${file}"
 	then
