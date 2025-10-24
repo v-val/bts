@@ -63,22 +63,22 @@ bts_D() {
 export -f bts_D
 
 bts_V() {
-  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_VERBOSE} ] || bts_L "${BTS_OUTPUT_STYLE_VERBOSE_:-}verb ${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_VERBOSE} ] || bts_L "${BTS_OUTPUT_STYLE_VERBOSE_:-} verb${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_V
 
 bts_I() {
-  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_INFO} ] || bts_L "${BTS_OUTPUT_STYLE_INFO_:-}info ${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_INFO} ] || bts_L "${BTS_OUTPUT_STYLE_INFO_:-} info${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_I
 
 bts_N() {
-  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_NOTICE} ] || bts_L "${BTS_OUTPUT_STYLE_NOTICE_:-}note ${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_NOTICE} ] || bts_L "${BTS_OUTPUT_STYLE_NOTICE_:-} note${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_N
 
 bts_W() {
-  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_WARNING} ] || bts_L "${BTS_OUTPUT_STYLE_WARNING_:=}warn ${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
+  [ ${BTS_LOG_LEVEL} -lt ${BTS_LOG_LEVEL_WARNING} ] || bts_L "${BTS_OUTPUT_STYLE_WARNING_:=} warn${BTS_RESET_OUTPUT_STYLE_:-}" "$@"
 }
 export -f bts_W
 
