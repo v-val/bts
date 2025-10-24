@@ -295,11 +295,25 @@ fi
 # Count steps
 #
 BTS_MODE_COUNT_STEPS_ONLY=${BTS_MODE_COUNT_STEPS_ONLY:-}
+#
+# Return success when is running in "production" mode or failure otherwise
+# It depends on BTS_MODE_COUNT_STEPS_ONLY only at the moment
+bts_is_in_idle_mode(){
+    [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+}
+export -f bts_is_in_idle_mode
+
+bts_is_in_work_mode() {
+    ! bts_is_in_idle_mode
+}
+export -f bts_is_in_work_mode
+
 BTS_STEPS_TOTAL_COUNT=0
 BTS_STEP_COUNT_FILE=".${BTS_APP_ID}.${BTS_JOB_NAME}-step-count"
-if [ -z "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
+if bts_is_in_work_mode
 then
     bts_D "Getting step count"
+    BTS_LOG_LEVEL=${BTS_LOG_LEVEL} \
     BTS_APP_WRAPPED_=1 \
     BTS_MODE_COUNT_STEPS_ONLY=1 \
     BTS_RECIPE="${BTS_RECIPE}" \
@@ -320,19 +334,6 @@ then
     rm -f "${BTS_STEP_COUNT_FILE}"
     bts_D "Total step count ${BTS_STEPS_TOTAL_COUNT}"
 fi
-
-#
-# Return success when is running in "production" mode or failure otherwise
-# It depends on BTS_MODE_COUNT_STEPS_ONLY only at the moment
-bts_is_in_idle_mode(){
-    [ "${BTS_MODE_COUNT_STEPS_ONLY:-}" ]
-}
-export -f bts_is_in_idle_mode
-
-bts_is_in_work_mode() {
-    ! bts_is_in_idle_mode
-}
-export -f bts_is_in_work_mode
 
 ################################################################
 #
