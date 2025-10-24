@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+export BTS_APP_URL="https://github.com/v-val/bts"
 BTS_APP_ID=${0##*/}
 export BTS_APP_ID=${BTS_APP_ID%.*[Ss][Hh]}
 export BTS_APP_DIR="${0%/*}"
