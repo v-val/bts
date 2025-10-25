@@ -1107,7 +1107,8 @@ bts_get()
                 cd "${BTS_GET_BACKUP_DIR:-}"
             fi
 
-            ${BTS_FETCH_UNSAFE:-${BTS_GET_UNSAFE:-}} bts_fetch "${file}" "${url}"
+            BTS_FETCH_UNSAFE=${BTS_FETCH_UNSAFE:-${BTS_GET_UNSAFE:-}} \
+            bts_fetch "${file}" "${url}"
 
             if [ "${BTS_GET_BACKUP_DIR:-}" ]
             then
