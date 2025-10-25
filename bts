@@ -601,7 +601,7 @@ bts_end()
     #
     # if last step was ok one cleans temporary files with postponed deletion
     #
-    if [ ${LAST_RC_} -eq 0 ] && bts_step_is_done_
+    if [ ${LAST_RC_} -eq 0 ] && ( [ ${BTS_STEPS_TOTAL_COUNT} -eq 0 ] || bts_step_is_done_ )
     then
         #
         # Recipe was processed without errors
