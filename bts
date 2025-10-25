@@ -145,7 +145,8 @@ export -f bts_step_is_in_progress_
 # Return true if step was entered and successfully completed once ; false otherwise
 bts_step_is_done_() {
     [ "${BUILD_STEP_FILE:-}" ] || bts_F "\`bts_step_is_done_\`: required var. BUILD_STEP_FILE unset"
-    [ "${BTS_STEP_ID:-0}" -a "${BTS_STEP_ID:-0}" -gt 0 -a -f "${BUILD_STEP_FILE}" ]
+    bts_T "bts_step_is_done_: ${BTS_STEP_ID:-0} -a -f ${BUILD_STEP_FILE}"
+    [ "${BTS_STEP_ID:-0}" -a -f "${BUILD_STEP_FILE}" ]
 }
 
 bts_get_timestamp_() {
