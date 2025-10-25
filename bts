@@ -872,7 +872,7 @@ bts_step()
 	if bts_step_is_done_
 	then
 	    # Nothing to do
-	    bts_N "${BTS_STEP_ID} of ${BTS_STEPS_TOTAL_COUNT}: ${BTS_SCOPE_NAME_} - $(bts_text_primary Done) [previously]"
+	    bts_N "${BTS_STEP_ID:-0} of ${BTS_STEPS_TOTAL_COUNT}: ${BTS_SCOPE_NAME_} - $(bts_text_primary Done) [previously]"
 #	    bts_I "Skip [already done]"
 	    BTS_STEP_START_TIME_=
 	    BTS_NSTEPS_SKIPPED_=$(( ${BTS_NSTEPS_SKIPPED_:-0} + 1 ))
