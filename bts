@@ -383,7 +383,7 @@ export BTS_NJOBS=${BTS_NJOBS:-${BTS_NJOBS_DEFAULT_}}
 # OS Class is win / unix / linux / mac / etc
 # OS Family is EL, EL etc
 BTS_OS_FAMILY=
-BTS_OS_FAMILY_EL="EL"
+export BTS_OS_FAMILY_EL="EL"
 Platform_EL=
 case ${OSTYPE,,} in
 msys)
